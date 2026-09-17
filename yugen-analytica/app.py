@@ -1,19 +1,17 @@
 import streamlit as st
-
 from src.data_loader import (
     load_dataset,
     validate_dataset,
     get_dataset_summary,
 )
 
-
 st.set_page_config(
-    page_title="Yugen Analytica",
+    page_title="Yugen Analytics",
     page_icon="📊",
     layout="wide",
 )
 
-st.title("Yugen Analytica")
+st.title("Yugen Analytics")
 st.subheader("Statistical Analysis Platform")
 
 st.write(
@@ -26,28 +24,36 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file is not None:
-
     try:
         df = load_dataset(uploaded_file)
 
-        valid, problems = validate_dataset(df)
+        st.success("Dataset uploaded successfully.")
 
-        if not valid:
-            st.warning("Dataset validation found some problems.")
+        st.subheader("Dataset Preview")
+        st.dataframe(df, use_container_width=True)
 
-            for problem in problems:
-                st.error(problem)
+        st.subheader("Dataset Validation")
 
+        validation = validate_dataset(df)
+
+        if validation["valid"]:
+            st.success("Dataset passed basic validation.")
         else:
-            st.success(
-                f"Successfully imported `{uploaded_file.name}`"
+            st.warning("Dataset has some issues.")
+
+        if validation["missing_values"] > 0:
+            st.info(
+                f"Missing values detected: "
+                f"{validation['missing_values']}"
             )
+        else:
+            st.success("No missing values detected.")
+
+        st.subheader("Dataset Summary")
 
         summary = get_dataset_summary(df)
 
-        st.markdown("### Dataset Overview")
-
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             st.metric("Rows", summary["rows"])
@@ -56,45 +62,7 @@ if uploaded_file is not None:
             st.metric("Columns", summary["columns"])
 
         with col3:
-            st.metric(
-                "Missing Values",
-                summary["missing_values"],
-            )
+            st.metric("Missing Values", summary["missing_values"])
 
-        with col4:
-            st.metric(
-                "Duplicate Rows",
-                summary["duplicate_rows"],
-            )
-
-        st.markdown("### Dataset Preview")
-
-        st.dataframe(
-            df.head(100),
-            use_container_width=True,
-        )
-
-        st.markdown("### Column Information")
-
-        column_info = df.dtypes.astype(str).reset_index()
-        column_info.columns = ["Column", "Data Type"]
-
-        st.dataframe(
-            column_info,
-            use_container_width=True,
-        )
-
-        st.markdown("### Missing Values")
-
-        missing = df.isna().sum().reset_index()
-        missing.columns = ["Column", "Missing Values"]
-
-        st.dataframe(
-            missing,
-            use_container_width=True,
-        )
-
-    except Exception as error:
-        st.error(
-            f"Unable to load the dataset: {error}"
-        )
+    except Exception as e:
+        st.error(f"Unable to process the dataset: {e}")
