@@ -5,7 +5,7 @@ from pathlib import Path
 SUPPORTED_EXTENSIONS = {
     ".csv",
     ".xlsx",
-    ".xls",
+    ".xls"
 }
 
 
@@ -16,8 +16,7 @@ def load_dataset(uploaded_file):
 
     if extension not in SUPPORTED_EXTENSIONS:
         raise ValueError(
-            f"Unsupported file type: {extension}. "
-            "Supported formats: CSV, XLSX, XLS."
+            f"Unsupported file type: {extension}"
         )
 
     if extension == ".csv":
@@ -29,38 +28,19 @@ def load_dataset(uploaded_file):
 def validate_dataset(df):
     """Perform basic dataset validation."""
 
-    if df.empty:
-        return False, ["The dataset is empty."]
+    missing_values = int(df.isna().sum().sum())
 
-    problems = []
-
-    if len(df.columns) == 0:
-        problems.append("No columns were detected.")
-
-    duplicate_columns = (
-        df.columns[df.columns.duplicated()]
-        .tolist()
-    )
-
-    if duplicate_columns:
-        problems.append(
-            f"Duplicate column names detected: "
-            f"{duplicate_columns}"
-        )
-
-    return len(problems) == 0, problems
+    return {
+        "valid": len(df.columns) > 0 and len(df) > 0,
+        "missing_values": missing_values,
+    }
 
 
 def get_dataset_summary(df):
-    """Return basic dataset information."""
+    """Return basic dataset statistics."""
 
     return {
-        "rows": len(df),
-        "columns": len(df.columns),
-        "missing_values": int(
-            df.isna().sum().sum()
-        ),
-        "duplicate_rows": int(
-            df.duplicated().sum()
-        ),
+        "rows": int(df.shape[0]),
+        "columns": int(df.shape[1]),
+        "missing_values": int(df.isna().sum().sum()),
     }
