@@ -6,7 +6,10 @@ from src.data_loader import (
     get_dataset_summary,
 )
 
-from src.statistics import get_numeric_statistics
+from src.statistics import (
+    get_numeric_statistics,
+    detect_outliers,
+)
 
 
 st.set_page_config(
@@ -36,6 +39,7 @@ if uploaded_file is not None:
         df = load_dataset(uploaded_file)
 
         st.success("Dataset uploaded successfully.")
+
 
         st.subheader("Dataset Preview")
 
@@ -119,8 +123,48 @@ if uploaded_file is not None:
             )
 
 
+        st.subheader("Outlier Detection")
+
+        outlier_results = detect_outliers(df)
+
+
+        if outlier_results.empty:
+
+            st.info(
+                "No numerical columns are available "
+                "for outlier detection."
+            )
+
+        else:
+
+            st.dataframe(
+                outlier_results,
+                use_container_width=True
+            )
+
+
+            total_outliers = int(
+                outlier_results["Outlier Count"].sum()
+            )
+
+
+            if total_outliers == 0:
+
+                st.success(
+                    "No potential outliers were detected "
+                    "using the 1.5 × IQR rule."
+                )
+
+            else:
+
+                st.warning(
+                    f"{total_outliers} potential outlier(s) "
+                    "were detected using the 1.5 × IQR rule."
+                )
+
+
     except Exception as e:
 
         st.error(
             f"Unable to process the dataset: {e}"
-        )
+            )
