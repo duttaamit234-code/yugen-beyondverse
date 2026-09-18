@@ -13,13 +13,13 @@ from src.statistics import (
 
 
 st.set_page_config(
-    page_title="Yugen Analytics",
+    page_title="StatsYuri",
     page_icon="📊",
     layout="wide",
 )
 
 
-st.title("Yugen Analytics")
+st.title("StatsYuri")
 st.subheader("Statistical Analysis Platform")
 
 st.write(
@@ -139,7 +139,8 @@ if uploaded_file is not None:
 
             st.dataframe(
                 outlier_results,
-                use_container_width=True
+                use_container_width=True,
+                hide_index=True
             )
 
 
