@@ -11,6 +11,12 @@ from src.statistics import (
     detect_outliers,
 )
 
+from src.visualization import (
+    get_numeric_columns,
+    create_histogram,
+    create_box_plot,
+)
+
 
 st.set_page_config(
     page_title="StatsYuri",
@@ -164,8 +170,54 @@ if uploaded_file is not None:
                 )
 
 
+        st.subheader("Data Visualization")
+
+        numeric_columns = get_numeric_columns(df)
+
+
+        if not numeric_columns:
+
+            st.info(
+                "No numerical columns are available "
+                "for visualization."
+            )
+
+        else:
+
+            selected_column = st.selectbox(
+                "Select a numerical column",
+                numeric_columns
+            )
+
+
+            st.write("### Histogram")
+
+            histogram = create_histogram(
+                df,
+                selected_column
+            )
+
+            st.pyplot(
+                histogram,
+                use_container_width=True
+            )
+
+
+            st.write("### Box Plot")
+
+            box_plot = create_box_plot(
+                df,
+                selected_column
+            )
+
+            st.pyplot(
+                box_plot,
+                use_container_width=True
+            )
+
+
     except Exception as e:
 
         st.error(
             f"Unable to process the dataset: {e}"
-            )
+        )
