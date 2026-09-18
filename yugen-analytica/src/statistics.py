@@ -1,4 +1,5 @@
 import pandas as pd
+from scipy import stats
 
 
 def get_numeric_statistics(df):
@@ -79,3 +80,26 @@ def calculate_correlation(df):
         return pd.DataFrame()
 
     return numeric_df.corr()
+
+
+def one_sample_t_test(df, column, hypothesized_mean):
+    """Perform a two-sided one-sample t-test."""
+
+    data = df[column].dropna()
+
+    if len(data) < 2:
+        return None
+
+    t_statistic, p_value = stats.ttest_1samp(
+        data,
+        popmean=hypothesized_mean
+    )
+
+    return {
+        "Sample Size": len(data),
+        "Sample Mean": data.mean(),
+        "Hypothesized Mean": hypothesized_mean,
+        "T-Statistic": t_statistic,
+        "P-Value": p_value,
+        "Degrees of Freedom": len(data) - 1,
+    }
