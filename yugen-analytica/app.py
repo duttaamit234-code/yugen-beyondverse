@@ -11,6 +11,7 @@ from src.statistics import (
     detect_outliers,
     calculate_correlation,
     one_sample_t_test,
+    two_sample_t_test,
 )
 
 from src.visualization import (
@@ -375,8 +376,193 @@ if uploaded_file is not None:
                         )
 
 
+        st.subheader("Two-Sample t-Test")
+
+        st.write(
+            "Compare the means of two independent groups "
+            "using Welch's two-sample t-test."
+        )
+
+
+        if len(numeric_columns) == 0:
+
+            st.info(
+                "A numerical column is required "
+                "for two-sample testing."
+            )
+
+        else:
+
+            possible_group_columns = [
+                column
+                for column in df.columns
+                if df[column].nunique(dropna=True) >= 2
+            ]
+
+
+            if not possible_group_columns:
+
+                st.info(
+                    "No suitable grouping column was found."
+                )
+
+            else:
+
+                group_column = st.selectbox(
+                    "Select the grouping column",
+                    possible_group_columns,
+                    key="group_column"
+                )
+
+
+                group_values = (
+                    df[group_column]
+                    .dropna()
+                    .unique()
+                    .tolist()
+                )
+
+
+                if len(group_values) < 2:
+
+                    st.info(
+                        "The selected grouping column "
+                        "must contain at least two groups."
+                    )
+
+                else:
+
+                    value_column = st.selectbox(
+                        "Select the numerical variable",
+                        numeric_columns,
+                        key="two_sample_value"
+                    )
+
+
+                    group1 = st.selectbox(
+                        "Select Group 1",
+                        group_values,
+                        key="group1"
+                    )
+
+
+                    remaining_groups = [
+                        value
+                        for value in group_values
+                        if value != group1
+                    ]
+
+
+                    group2 = st.selectbox(
+                        "Select Group 2",
+                        remaining_groups,
+                        key="group2"
+                    )
+
+
+                    two_sample_alpha = st.selectbox(
+                        "Significance Level (α)",
+                        [0.01, 0.05, 0.10],
+                        index=1,
+                        key="two_sample_alpha"
+                    )
+
+
+                    if st.button(
+                        "Run Two-Sample t-Test"
+                    ):
+
+                        two_sample_result = two_sample_t_test(
+                            df,
+                            value_column,
+                            group_column,
+                            group1,
+                            group2
+                        )
+
+
+                        if two_sample_result is None:
+
+                            st.error(
+                                "Each selected group must have "
+                                "at least two valid numerical observations."
+                            )
+
+                        else:
+
+                            result_col1, result_col2 = st.columns(2)
+
+
+                            with result_col1:
+
+                                st.metric(
+                                    f"{group1} Mean",
+                                    f"{two_sample_result['Group 1 Mean']:.4f}"
+                                )
+
+                                st.metric(
+                                    f"{group1} Sample Size",
+                                    two_sample_result["Group 1 Size"]
+                                )
+
+                                st.metric(
+                                    "Mean Difference",
+                                    f"{two_sample_result['Mean Difference']:.4f}"
+                                )
+
+                                st.metric(
+                                    "T-Statistic",
+                                    f"{two_sample_result['T-Statistic']:.4f}"
+                                )
+
+
+                            with result_col2:
+
+                                st.metric(
+                                    f"{group2} Mean",
+                                    f"{two_sample_result['Group 2 Mean']:.4f}"
+                                )
+
+                                st.metric(
+                                    f"{group2} Sample Size",
+                                    two_sample_result["Group 2 Size"]
+                                )
+
+                                st.metric(
+                                    "P-Value",
+                                    f"{two_sample_result['P-Value']:.6f}"
+                                )
+
+                                st.metric(
+                                    "Degrees of Freedom",
+                                    f"{two_sample_result['Degrees of Freedom']:.4f}"
+                                )
+
+
+                            if (
+                                two_sample_result["P-Value"]
+                                < two_sample_alpha
+                            ):
+
+                                st.warning(
+                                    f"Reject the null hypothesis at "
+                                    f"α = {two_sample_alpha}. "
+                                    "The sample provides evidence "
+                                    "that the two population means differ."
+                                )
+
+                            else:
+
+                                st.success(
+                                    f"Fail to reject the null hypothesis "
+                                    f"at α = {two_sample_alpha}. "
+                                    "The sample does not provide sufficient "
+                                    "evidence that the two population means differ."
+                                )
+
+
     except Exception as e:
 
         st.error(
             f"Unable to process the dataset: {e}"
-        )
+                    )
