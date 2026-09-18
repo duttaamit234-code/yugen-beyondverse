@@ -10,6 +10,7 @@ from src.statistics import (
     get_numeric_statistics,
     detect_outliers,
     calculate_correlation,
+    one_sample_t_test,
 )
 
 from src.visualization import (
@@ -258,8 +259,124 @@ if uploaded_file is not None:
             )
 
 
+        st.subheader("Hypothesis Testing")
+
+        st.write(
+            "One-Sample t-Test: test whether the "
+            "population mean differs from a specified value."
+        )
+
+
+        if not numeric_columns:
+
+            st.info(
+                "No numerical columns are available "
+                "for hypothesis testing."
+            )
+
+        else:
+
+            test_column = st.selectbox(
+                "Select a numerical column for the t-test",
+                numeric_columns,
+                key="ttest_column"
+            )
+
+
+            hypothesized_mean = st.number_input(
+                "Hypothesized Mean",
+                value=0.0,
+                step=1.0
+            )
+
+
+            significance_level = st.selectbox(
+                "Significance Level (α)",
+                [0.01, 0.05, 0.10],
+                index=1
+            )
+
+
+            if st.button("Run One-Sample t-Test"):
+
+                test_result = one_sample_t_test(
+                    df,
+                    test_column,
+                    hypothesized_mean
+                )
+
+
+                if test_result is None:
+
+                    st.error(
+                        "At least two valid observations "
+                        "are required for the t-test."
+                    )
+
+                else:
+
+                    result_col1, result_col2 = st.columns(2)
+
+
+                    with result_col1:
+
+                        st.metric(
+                            "Sample Mean",
+                            f"{test_result['Sample Mean']:.4f}"
+                        )
+
+                        st.metric(
+                            "T-Statistic",
+                            f"{test_result['T-Statistic']:.4f}"
+                        )
+
+                        st.metric(
+                            "Degrees of Freedom",
+                            test_result["Degrees of Freedom"]
+                        )
+
+
+                    with result_col2:
+
+                        st.metric(
+                            "Hypothesized Mean",
+                            f"{test_result['Hypothesized Mean']:.4f}"
+                        )
+
+                        st.metric(
+                            "P-Value",
+                            f"{test_result['P-Value']:.6f}"
+                        )
+
+                        st.metric(
+                            "Sample Size",
+                            test_result["Sample Size"]
+                        )
+
+
+                    if test_result["P-Value"] < significance_level:
+
+                        st.warning(
+                            f"Reject the null hypothesis at "
+                            f"α = {significance_level}. "
+                            "The sample provides evidence that "
+                            "the population mean differs from "
+                            "the hypothesized mean."
+                        )
+
+                    else:
+
+                        st.success(
+                            f"Fail to reject the null hypothesis "
+                            f"at α = {significance_level}. "
+                            "The sample does not provide sufficient "
+                            "evidence that the population mean differs "
+                            "from the hypothesized mean."
+                        )
+
+
     except Exception as e:
 
         st.error(
             f"Unable to process the dataset: {e}"
-)
+        )
