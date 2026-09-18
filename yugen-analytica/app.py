@@ -9,12 +9,14 @@ from src.data_loader import (
 from src.statistics import (
     get_numeric_statistics,
     detect_outliers,
+    calculate_correlation,
 )
 
 from src.visualization import (
     get_numeric_columns,
     create_histogram,
     create_box_plot,
+    create_correlation_heatmap,
 )
 
 
@@ -216,8 +218,48 @@ if uploaded_file is not None:
             )
 
 
+        st.subheader("Correlation Analysis")
+
+        correlation_matrix = calculate_correlation(df)
+
+
+        if correlation_matrix.empty:
+
+            st.info(
+                "At least two numerical columns "
+                "are required for correlation analysis."
+            )
+
+        else:
+
+            st.write(
+                "Pearson correlation coefficients "
+                "between numerical variables."
+            )
+
+
+            st.dataframe(
+                correlation_matrix,
+                use_container_width=True
+            )
+
+
+            st.write("### Correlation Heatmap")
+
+
+            heatmap = create_correlation_heatmap(
+                correlation_matrix
+            )
+
+
+            st.pyplot(
+                heatmap,
+                use_container_width=True
+            )
+
+
     except Exception as e:
 
         st.error(
             f"Unable to process the dataset: {e}"
-        )
+)
