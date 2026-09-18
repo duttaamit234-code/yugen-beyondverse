@@ -37,3 +37,39 @@ def create_box_plot(df, column):
     ax.set_ylabel(column)
 
     return fig
+
+
+def create_correlation_heatmap(correlation_matrix):
+    """Create a heatmap from a correlation matrix."""
+
+    fig, ax = plt.subplots()
+
+    image = ax.imshow(
+        correlation_matrix,
+        interpolation="nearest",
+        aspect="auto"
+    )
+
+    ax.set_xticks(
+        range(len(correlation_matrix.columns))
+    )
+
+    ax.set_yticks(
+        range(len(correlation_matrix.columns))
+    )
+
+    ax.set_xticklabels(
+        correlation_matrix.columns,
+        rotation=45,
+        ha="right"
+    )
+
+    ax.set_yticklabels(
+        correlation_matrix.columns
+    )
+
+    ax.set_title("Correlation Matrix")
+
+    fig.colorbar(image, ax=ax)
+
+    return fig
