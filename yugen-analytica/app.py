@@ -981,6 +981,65 @@ if uploaded_file is not None:
             hide_index=True
         )
 
+        st.write("### Interpretation")
+
+        st.info(
+            f"At α = {chi_critical_alpha:.3f} with {chi_critical_df} "
+            f"degree(s) of freedom, the critical χ² value is "
+            f"{chi_critical_value:.4f}. A calculated χ² value greater "
+            "than this critical value falls in the rejection region."
+        )
+
+        chi_calculated = st.number_input(
+            "Optional χ²-Calculated value",
+            min_value=0.0,
+            value=0.0,
+            step=0.1,
+            key="chi_calculated_for_critical"
+        )
+
+        if chi_calculated > 0:
+
+            if chi_calculated > chi_critical_value:
+
+                st.warning(
+                    f"χ²-calculated ({chi_calculated:.4f}) > "
+                    f"χ²-tabulated ({chi_critical_value:.4f}). "
+                    "Reject the null hypothesis at the selected "
+                    "significance level."
+                )
+
+                st.write(
+                    "### Conclusion"
+                )
+
+                st.write(
+                    "The calculated chi-square statistic lies in the "
+                    "rejection region. Therefore, the observed result "
+                    "is statistically significant at the selected "
+                    "significance level."
+                )
+
+            else:
+
+                st.success(
+                    f"χ²-calculated ({chi_calculated:.4f}) ≤ "
+                    f"χ²-tabulated ({chi_critical_value:.4f}). "
+                    "Fail to reject the null hypothesis at the selected "
+                    "significance level."
+                )
+
+                st.write(
+                    "### Conclusion"
+                )
+
+                st.write(
+                    "The calculated chi-square statistic does not lie "
+                    "in the rejection region. Therefore, there is not "
+                    "sufficient statistical evidence to reject the null "
+                    "hypothesis at the selected significance level."
+                )
+
         st.caption(
             "This value is the same type of critical value found "
             "in a printed χ² distribution table."
