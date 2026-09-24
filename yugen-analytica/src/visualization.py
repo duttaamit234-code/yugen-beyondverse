@@ -2,10 +2,34 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def get_numeric_columns(df):
-    """Return the names of numerical columns."""
+def _looks_like_identifier(column_name):
+    """Identify common identifier/index columns that should not drive analysis."""
+    name = str(column_name).strip().lower()
+    identifier_tokens = (
+        "id",
+        "index",
+        "serial",
+        "code",
+        "roll",
+        "record",
+    )
+    return (
+        name in identifier_tokens
+        or any(
+            name.startswith(token + "_")
+            or name.endswith("_" + token)
+            for token in identifier_tokens
+        )
+    )
 
-    return df.select_dtypes(include="number").columns.tolist()
+
+def get_numeric_columns(df):
+    """Return numerical columns suitable for statistical analysis."""
+    return [
+        column
+        for column in df.select_dtypes(include="number").columns.tolist()
+        if not _looks_like_identifier(column)
+    ]
 
 
 def create_histogram(df, column):
