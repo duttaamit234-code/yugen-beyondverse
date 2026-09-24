@@ -639,8 +639,9 @@ def cramers_v(df, factor1, factor2):
     return (phi2 / denominator) ** 0.5
 
 
-def tukey_hsd_posthoc(df, value_column, group_column):
+def tukey_hsd_posthoc(df, value_column, group_column, alpha=0.05):
     """Perform Tukey HSD pairwise comparisons after one-way ANOVA."""
+
     data = df[[value_column, group_column]].dropna().copy()
     data[value_column] = pd.to_numeric(data[value_column], errors="coerce")
     data = data.dropna()
@@ -650,7 +651,7 @@ def tukey_hsd_posthoc(df, value_column, group_column):
     result = pairwise_tukeyhsd(
         data[value_column],
         data[group_column],
-        alpha=0.05
+        alpha=alpha
     )
     table = pd.DataFrame(
         data=result._results_table.data[1:],
