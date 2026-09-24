@@ -82,6 +82,84 @@ def calculate_correlation(df):
     return numeric_df.corr()
 
 
+def chi_square_goodness_of_fit(df, column):
+    """Perform a chi-square goodness-of-fit test for equal category frequencies."""
+
+    observed_series = df[column].dropna()
+
+    if observed_series.empty:
+        return None
+
+    observed = observed_series.value_counts(sort=False)
+    expected_value = observed.sum() / len(observed)
+    expected = pd.Series(
+        expected_value,
+        index=observed.index
+    )
+
+    if len(observed) < 2 or (expected <= 0).any():
+        return None
+
+    chi_square_statistic, p_value = stats.chisquare(
+        f_obs=observed.values,
+        f_exp=expected.values
+    )
+
+    degrees_of_freedom = len(observed) - 1
+
+    return {
+        "Categories": observed.index.tolist(),
+        "Observed": observed.values.tolist(),
+        "Expected": expected.values.tolist(),
+        "Chi-Square": chi_square_statistic,
+        "P-Value": p_value,
+        "Degrees of Freedom": degrees_of_freedom,
+    }
+
+
+def chi_square_independence(df, factor1, factor2):
+    """Perform Pearson's chi-square test of independence."""
+
+    data = df[[factor1, factor2]].dropna()
+
+    if (
+        data.empty
+        or data[factor1].nunique() < 2
+        or data[factor2].nunique() < 2
+    ):
+        return None
+
+    contingency_table = pd.crosstab(
+        data[factor1],
+        data[factor2]
+    )
+
+    if contingency_table.shape[0] < 2 or contingency_table.shape[1] < 2:
+        return None
+
+    chi_square_statistic, p_value, degrees_of_freedom, expected = (
+        stats.chi2_contingency(
+            contingency_table,
+            correction=False
+        )
+    )
+
+    expected_table = pd.DataFrame(
+        expected,
+        index=contingency_table.index,
+        columns=contingency_table.columns
+    )
+
+    return {
+        "Observed Table": contingency_table,
+        "Expected Table": expected_table,
+        "Chi-Square": chi_square_statistic,
+        "P-Value": p_value,
+        "Degrees of Freedom": degrees_of_freedom,
+        "Observations": int(contingency_table.to_numpy().sum()),
+    }
+
+
 def one_sample_t_test(df, column, hypothesized_mean):
     """Perform a two-sided one-sample t-test."""
 
