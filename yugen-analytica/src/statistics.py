@@ -555,3 +555,37 @@ def mann_whitney_u_test(df, column_1, column_2):
         "U-Statistic": result.statistic,
         "P-Value": result.pvalue,
     }
+
+
+def shapiro_wilk_test(df, column):
+    """Test whether a numerical variable is consistent with normality."""
+    data = pd.to_numeric(df[column], errors="coerce").dropna()
+    if len(data) < 3:
+        return None
+    result = stats.shapiro(data)
+    return {
+        "Variable": column,
+        "Sample Size": len(data),
+        "W-Statistic": result.statistic,
+        "P-Value": result.pvalue,
+    }
+
+
+def levene_variance_test(df, value_column, group_column):
+    """Test equality of variances across groups using Levene's test."""
+    data = df[[value_column, group_column]].dropna().copy()
+    groups = [
+        pd.to_numeric(group[value_column], errors="coerce").dropna()
+        for _, group in data.groupby(group_column)
+    ]
+    groups = [group for group in groups if len(group) >= 2]
+    if len(groups) < 2:
+        return None
+    result = stats.levene(*groups, center="median")
+    return {
+        "Value Variable": value_column,
+        "Grouping Variable": group_column,
+        "Groups": len(groups),
+        "F-Statistic": result.statistic,
+        "P-Value": result.pvalue,
+    }
