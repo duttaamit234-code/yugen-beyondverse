@@ -105,6 +105,57 @@ def one_sample_t_test(df, column, hypothesized_mean):
     }
 
 
+def one_way_anova(df, value_column, group_column):
+    """Perform a one-way ANOVA across three or more independent groups."""
+
+    groups = []
+
+    for group in df[group_column].dropna().unique():
+        data = df[
+            df[group_column] == group
+        ][value_column].dropna()
+
+        if len(data) >= 2:
+            groups.append(data)
+
+    if len(groups) < 3:
+        return None
+
+    f_statistic, p_value = stats.f_oneway(*groups)
+
+    group_labels = []
+    group_sizes = []
+    group_means = []
+
+    for group in df[group_column].dropna().unique():
+        data = df[
+            df[group_column] == group
+        ][value_column].dropna()
+
+        if len(data) >= 2:
+            group_labels.append(group)
+            group_sizes.append(len(data))
+            group_means.append(data.mean())
+
+    total_n = sum(group_sizes)
+    number_of_groups = len(group_sizes)
+
+    between_df = number_of_groups - 1
+    within_df = total_n - number_of_groups
+
+    return {
+        "Group Labels": group_labels,
+        "Group Sizes": group_sizes,
+        "Group Means": group_means,
+        "Number of Groups": number_of_groups,
+        "Total Sample Size": total_n,
+        "F-Statistic": f_statistic,
+        "P-Value": p_value,
+        "Between-Group DF": between_df,
+        "Within-Group DF": within_df,
+    }
+
+
 def two_sample_t_test(
     df,
     value_column,
