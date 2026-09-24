@@ -449,9 +449,14 @@ def two_sample_t_test_wide(df, value_column_1, value_column_2):
     }
 
 def calculate_confidence_intervals(df, alpha=0.05):
-    """Calculate t-based confidence intervals for numerical column means."""
+    """Calculate t-based confidence intervals for analysis-ready numeric means.
 
-    numeric_df = df.select_dtypes(include="number")
+    Identifier/index columns are deliberately excluded so that fields such as
+    Student_ID do not receive meaningless population-mean intervals.
+    """
+
+    numeric_columns = _analysis_numeric_columns(df)
+    numeric_df = df[numeric_columns]
 
     if numeric_df.empty:
         return pd.DataFrame()
@@ -496,7 +501,12 @@ def calculate_confidence_intervals(df, alpha=0.05):
     return pd.DataFrame(results)
 
 def simple_linear_regression(df, x_column, y_column):
-    """Perform simple linear regression between two numerical variables."""
+    """Perform simple linear regression on analysis-ready numeric variables."""
+
+    analysis_columns = _analysis_numeric_columns(df)
+
+    if x_column not in analysis_columns or y_column not in analysis_columns:
+        return None
 
     data = df[[x_column, y_column]].apply(
         pd.to_numeric,
@@ -718,9 +728,18 @@ def kruskal_wallis_test(df, value_column, group_column):
 
 
 def multiple_linear_regression(df, response_column, predictor_columns):
-    """Perform multiple linear regression using selected numerical predictors."""
-    if not predictor_columns or response_column in predictor_columns:
+    """Perform multiple linear regression using analysis-ready numeric predictors."""
+
+    analysis_columns = _analysis_numeric_columns(df)
+
+    if (
+        not predictor_columns
+        or response_column in predictor_columns
+        or response_column not in analysis_columns
+        or any(column not in analysis_columns for column in predictor_columns)
+    ):
         return None
+
     columns = [response_column] + predictor_columns
     data = df[columns].apply(pd.to_numeric, errors="coerce").dropna()
     if len(data) <= len(predictor_columns) + 1:
