@@ -28,6 +28,12 @@ from src.statistics import (
     two_way_anova,
     chi_square_goodness_of_fit,
     chi_square_independence,
+    cohens_d_independent,
+    one_way_eta_squared,
+    cramers_v,
+    tukey_hsd_posthoc,
+    kruskal_wallis_test,
+    multiple_linear_regression,
 )
 
 from src.visualization import (
@@ -702,6 +708,92 @@ if uploaded_file is not None:
                             "that the two independent groups differ in "
                             "their distributions."
                         )
+
+
+        st.subheader("Kruskal-Wallis Test")
+
+        st.write(
+            "Non-parametric comparison of three or more independent groups."
+        )
+
+        if not numeric_columns:
+            st.info("A numerical response variable is required.")
+        else:
+            kw_groups = [
+                column for column in df.columns
+                if not pd.api.types.is_numeric_dtype(df[column])
+                and df[column].nunique(dropna=True) >= 3
+            ]
+
+            if not kw_groups:
+                st.info(
+                    "No categorical grouping variable with at least three "
+                    "groups was found."
+                )
+            else:
+                kw_group = st.selectbox(
+                    "Kruskal-Wallis grouping variable",
+                    kw_groups,
+                    key="kw_group"
+                )
+                kw_value = st.selectbox(
+                    "Kruskal-Wallis response",
+                    numeric_columns,
+                    key="kw_value"
+                )
+                kw_alpha = st.selectbox(
+                    "Kruskal-Wallis Significance Level (α)",
+                    [0.01, 0.05, 0.10],
+                    index=1,
+                    key="kw_alpha"
+                )
+
+                if st.button("Run Kruskal-Wallis Test"):
+                    kw_result = kruskal_wallis_test(
+                        df,
+                        kw_value,
+                        kw_group
+                    )
+
+                    if kw_result is None:
+                        st.error(
+                            "At least three groups with two or more valid "
+                            "observations each are required."
+                        )
+                    else:
+                        kw_table = pd.DataFrame({
+                            "H-Statistic": [kw_result["H-Statistic"]],
+                            "df": [kw_result["Degrees of Freedom"]],
+                            "p-value": [kw_result["P-Value"]],
+                            "Decision": [
+                                "Significant"
+                                if kw_result["P-Value"] < kw_alpha
+                                else "Not Significant"
+                            ],
+                        })
+
+                        st.dataframe(
+                            kw_table.style.format({
+                                "H-Statistic": "{:.4f}",
+                                "p-value": lambda value:
+                                    "<0.000001"
+                                    if value < 0.000001
+                                    else f"{value:.6f}",
+                            }),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                        if kw_result["P-Value"] < kw_alpha:
+                            st.warning(
+                                "The group distributions differ significantly "
+                                "at the selected significance level."
+                            )
+                        else:
+                            st.success(
+                                "There is insufficient evidence of a difference "
+                                "among the group distributions."
+                            )
 
 
         st.subheader("Regression Analysis")
@@ -1403,6 +1495,105 @@ if uploaded_file is not None:
                 )
 
 
+        st.subheader("Multiple Linear Regression")
+
+        st.write(
+            "Model a numerical response using multiple numerical predictors."
+        )
+
+        if len(numeric_columns) < 3:
+            st.info(
+                "At least one response and two numerical predictors are "
+                "recommended for multiple regression."
+            )
+        else:
+            mlr_response = st.selectbox(
+                "Response variable",
+                numeric_columns,
+                key="mlr_response"
+            )
+
+            mlr_predictors = st.multiselect(
+                "Predictor variables",
+                [column for column in numeric_columns if column != mlr_response],
+                key="mlr_predictors"
+            )
+
+            mlr_alpha = st.selectbox(
+                "Multiple Regression Significance Level (α)",
+                [0.01, 0.05, 0.10],
+                index=1,
+                key="mlr_alpha"
+            )
+
+            if st.button("Run Multiple Linear Regression"):
+                mlr_result = multiple_linear_regression(
+                    df,
+                    mlr_response,
+                    mlr_predictors
+                )
+
+                if mlr_result is None:
+                    st.error(
+                        "Select at least one predictor and provide enough "
+                        "valid observations with variation."
+                    )
+                else:
+                    st.write("### Model Summary")
+                    mlr_summary = pd.DataFrame({
+                        "Metric": [
+                            "Observations",
+                            "R²",
+                            "Adjusted R²",
+                            "F-Statistic",
+                            "Model p-value",
+                        ],
+                        "Value": [
+                            mlr_result["Observations"],
+                            mlr_result["R-Squared"],
+                            mlr_result["Adjusted R-Squared"],
+                            mlr_result["F-Statistic"],
+                            mlr_result["Model P-Value"],
+                        ],
+                    })
+
+                    st.dataframe(
+                        mlr_summary.style.format({
+                            "Value": lambda value:
+                                f"{value:.6f}"
+                                if pd.notna(value) else "—"
+                        }),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    st.write("### Coefficients")
+                    st.dataframe(
+                        mlr_result["Coefficients"].style.format({
+                            "Coefficient": "{:.6f}",
+                            "Standard Error": "{:.6f}",
+                            "t-Statistic": "{:.4f}",
+                            "p-value": lambda value:
+                                "<0.000001"
+                                if value < 0.000001
+                                else f"{value:.6f}",
+                        }),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    if mlr_result["Model P-Value"] < mlr_alpha:
+                        st.success(
+                            "The overall regression model is statistically "
+                            "significant at the selected level."
+                        )
+                    else:
+                        st.info(
+                            "The overall regression model is not statistically "
+                            "significant at the selected level."
+                        )
+
+
         st.subheader("One-Way ANOVA")
 
         st.write(
@@ -1700,6 +1891,71 @@ if uploaded_file is not None:
         )
 
 
+        st.subheader("ANOVA Effect Size and Post-Hoc Analysis")
+
+        if anova_group_columns:
+            effect_group = st.selectbox(
+                "ANOVA grouping variable",
+                anova_group_columns,
+                key="effect_anova_group"
+            )
+            effect_value = st.selectbox(
+                "ANOVA response variable",
+                numeric_columns,
+                key="effect_anova_value"
+            )
+
+            if st.button("Calculate ANOVA Effect Size and Tukey Post-Hoc"):
+                effect_anova = one_way_anova(
+                    df,
+                    effect_value,
+                    effect_group
+                )
+
+                if effect_anova is None:
+                    st.error(
+                        "At least three groups with sufficient valid observations "
+                        "are required."
+                    )
+                else:
+                    eta = one_way_eta_squared(effect_anova)
+
+                    st.metric(
+                        "Eta-Squared (η²)",
+                        f"{eta:.4f}" if eta is not None else "—"
+                    )
+
+                    st.caption(
+                        "η² describes the proportion of response variation "
+                        "associated with the grouping factor."
+                    )
+
+                    if effect_anova["P-Value"] < anova_alpha:
+                        tukey = tukey_hsd_posthoc(
+                            df,
+                            effect_value,
+                            effect_group
+                        )
+
+                        if tukey is not None:
+                            st.write("### Tukey HSD Post-Hoc Comparisons")
+                            st.dataframe(
+                                tukey,
+                                use_container_width=True,
+                                hide_index=True
+                            )
+                        else:
+                            st.info(
+                                "Tukey HSD could not be calculated for the "
+                                "selected data."
+                            )
+                    else:
+                        st.info(
+                            "Post-hoc comparisons are not run because the "
+                            "overall ANOVA is not significant at the selected α."
+                        )
+
+
         st.subheader("Chi-Square Tests")
 
         st.write(
@@ -1960,6 +2216,97 @@ if uploaded_file is not None:
                             "Observations Used",
                             chi_ind_result["Observations"]
                         )
+
+
+        st.subheader("Effect Sizes")
+
+        st.write(
+            "Effect sizes describe the practical magnitude of an association "
+            "or difference, complementing statistical significance."
+        )
+
+        if len(numeric_columns) >= 2:
+            d_col1, d_col2 = st.columns(2)
+
+            with d_col1:
+                d_group1 = st.selectbox(
+                    "Group 1",
+                    numeric_columns,
+                    key="effect_d_group1"
+                )
+
+            with d_col2:
+                d_group2_options = [
+                    column for column in numeric_columns
+                    if column != d_group1
+                ]
+                d_group2 = st.selectbox(
+                    "Group 2",
+                    d_group2_options,
+                    key="effect_d_group2"
+                )
+
+            if st.button("Calculate Cohen's d"):
+                d_result = cohens_d_independent(
+                    df,
+                    d_group1,
+                    d_group2
+                )
+
+                if d_result is None:
+                    st.error(
+                        "Both numerical groups need at least two valid "
+                        "observations and non-zero pooled variation."
+                    )
+                else:
+                    d_value = d_result["Cohen's d"]
+                    d_abs = abs(d_value)
+                    d_strength = (
+                        "small" if d_abs < 0.5
+                        else "medium" if d_abs < 0.8
+                        else "large"
+                    )
+
+                    st.metric("Cohen's d", f"{d_value:.4f}")
+                    st.write(
+                        f"The standardized difference is **{d_strength}** "
+                        f"(using common Cohen's d thresholds)."
+                    )
+
+        if len(categorical_columns) >= 2:
+            cv_factor1 = st.selectbox(
+                "Categorical variable 1",
+                categorical_columns,
+                key="effect_cv_factor1"
+            )
+            cv_factor2_options = [
+                column for column in categorical_columns
+                if column != cv_factor1
+            ]
+            cv_factor2 = st.selectbox(
+                "Categorical variable 2",
+                cv_factor2_options,
+                key="effect_cv_factor2"
+            )
+
+            if st.button("Calculate Cramér's V"):
+                cv_value = cramers_v(
+                    df,
+                    cv_factor1,
+                    cv_factor2
+                )
+
+                if cv_value is None:
+                    st.error(
+                        "Two categorical variables with at least two "
+                        "valid categories each are required."
+                    )
+                else:
+                    st.metric("Cramér's V", f"{cv_value:.4f}")
+                    st.caption(
+                        "Cramér's V ranges from 0 to 1, with larger values "
+                        "indicating stronger association."
+                    )
 
 
         st.subheader("Two-Way ANOVA")
