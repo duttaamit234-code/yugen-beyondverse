@@ -101,13 +101,41 @@ def interpret_effect_size(effect_name, value):
     return f"{effect_name} = {value:.4f} ({label} by the selected heuristic)."
 
 
+def _looks_like_identifier(column_name):
+    """Identify common ID/index columns that should not drive analysis."""
+    name = str(column_name).strip().lower()
+    identifier_tokens = (
+        "id",
+        "index",
+        "serial",
+        "code",
+        "roll",
+        "record",
+    )
+    return (
+        name in identifier_tokens
+        or any(
+            name.startswith(token + "_")
+            or name.endswith("_" + token)
+            for token in identifier_tokens
+        )
+    )
+
+
 def _column_profile(df):
-    numeric = df.select_dtypes(include="number").columns.tolist()
+    numeric = [
+        column
+        for column in df.select_dtypes(include="number").columns.tolist()
+        if not _looks_like_identifier(column)
+    ]
+
     categorical = [
         column
         for column in df.columns
         if column not in numeric
+        and not _looks_like_identifier(column)
         and df[column].nunique(dropna=True) >= 2
+        and df[column].nunique(dropna=True) <= max(20, int(len(df) * 0.5))
     ]
 
     return numeric, categorical
