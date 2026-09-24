@@ -121,6 +121,6 @@ A p-value is interpreted relative to the selected significance level (α). A sma
 
 ## Version
 
-StatsYuri v1.0
+StatsYuri v1.1
 
 The current version represents the completed initial statistical-analysis scope of the project.
