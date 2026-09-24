@@ -2,10 +2,41 @@ import pandas as pd
 from scipy import stats
 
 
+def _looks_like_identifier(column_name):
+    """Identify common identifier/index columns that should not drive analysis."""
+    name = str(column_name).strip().lower()
+    identifier_tokens = (
+        "id",
+        "index",
+        "serial",
+        "code",
+        "roll",
+        "record",
+    )
+    return (
+        name in identifier_tokens
+        or any(
+            name.startswith(token + "_")
+            or name.endswith("_" + token)
+            for token in identifier_tokens
+        )
+    )
+
+
+def _analysis_numeric_columns(df):
+    """Return numerical columns excluding common identifier fields."""
+    return [
+        column
+        for column in df.select_dtypes(include="number").columns.tolist()
+        if not _looks_like_identifier(column)
+    ]
+
+
 def get_numeric_statistics(df):
     """Calculate descriptive statistics for numeric columns."""
 
-    numeric_df = df.select_dtypes(include="number")
+    numeric_columns = _analysis_numeric_columns(df)
+    numeric_df = df[numeric_columns]
 
     if numeric_df.empty:
         return pd.DataFrame()
