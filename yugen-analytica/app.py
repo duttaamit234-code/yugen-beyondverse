@@ -768,7 +768,8 @@ if uploaded_file is not None:
             anova_group_columns = [
                 column
                 for column in df.columns
-                if df[column].nunique(dropna=True) >= 3
+                if not pd.api.types.is_numeric_dtype(df[column])
+                and df[column].nunique(dropna=True) >= 3
             ]
 
 
