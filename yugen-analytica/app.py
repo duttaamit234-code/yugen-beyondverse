@@ -935,6 +935,58 @@ if uploaded_file is not None:
 
 
 
+        st.subheader("Chi-Square Critical Value Calculator")
+
+        st.write(
+            "Calculate the χ² tabulated (critical) value from "
+            "degrees of freedom and significance level."
+        )
+
+        critical_col1, critical_col2 = st.columns(2)
+
+        with critical_col1:
+            chi_critical_df = st.number_input(
+                "Degrees of Freedom",
+                min_value=1,
+                value=1,
+                step=1,
+                key="chi_critical_df"
+            )
+
+        with critical_col2:
+            chi_critical_alpha = st.selectbox(
+                "Significance Level (α)",
+                [0.01, 0.025, 0.05, 0.10],
+                index=2,
+                key="chi_critical_alpha"
+            )
+
+        chi_critical_value = stats.chi2.ppf(
+            1 - chi_critical_alpha,
+            chi_critical_df
+        )
+
+        chi_critical_result = pd.DataFrame({
+            "df": [chi_critical_df],
+            "α": [chi_critical_alpha],
+            "χ²-Tabulated": [chi_critical_value],
+        })
+
+        st.dataframe(
+            chi_critical_result.style.format({
+                "α": "{:.3f}",
+                "χ²-Tabulated": "{:.4f}",
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.caption(
+            "This value is the same type of critical value found "
+            "in a printed χ² distribution table."
+        )
+
+
         st.subheader("Chi-Square Tests")
 
         st.write(
