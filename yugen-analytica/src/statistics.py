@@ -157,6 +157,24 @@ def one_way_anova(df, value_column, group_column):
 
 
 
+def f_critical_value(alpha, numerator_df, denominator_df):
+    """Calculate the upper-tail F critical (tabulated) value."""
+    
+    if (
+        alpha <= 0
+        or alpha >= 1
+        or numerator_df <= 0
+        or denominator_df <= 0
+    ):
+        return None
+
+    return stats.f.ppf(
+        1 - alpha,
+        numerator_df,
+        denominator_df
+    )
+
+
 def two_way_anova(df, value_column, factor1, factor2):
     """Perform a two-way ANOVA with main effects and interaction."""
 
