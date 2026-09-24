@@ -797,12 +797,54 @@ if uploaded_file is not None:
 
                     else:
 
-                        st.write("### Two-Way ANOVA Table")
+                        st.write("### Two-Way ANOVA Results")
 
                         anova_table = two_way_result["ANOVA Table"].copy()
 
+                        def format_anova_source(source):
+                            if source.startswith("C(Q("):
+                                parts = source.replace("C(Q(\"", "").replace("\"))", "")
+                                if ":C(Q(\"" in parts:
+                                    parts = parts.replace(":C(Q(\"", " × ").replace("\"))", "")
+                                return parts
+                            return source
+
+                        display_table = anova_table.rename(
+                            columns={
+                                "Source": "Effect",
+                                "Sum of Squares": "Sum of Squares",
+                                "Degrees of Freedom": "df",
+                                "F-Statistic": "F",
+                                "P-Value": "p-value",
+                            }
+                        ).copy()
+
+                        display_table["Effect"] = display_table["Effect"].apply(
+                            format_anova_source
+                        )
+
+                        display_table["df"] = display_table["df"].map(
+                            lambda value: f"{value:.0f}"
+                            if pd.notna(value) else ""
+                        )
+
+                        display_table["F"] = display_table["F"].map(
+                            lambda value: f"{value:.4f}"
+                            if pd.notna(value) else "—"
+                        )
+
+                        display_table["p-value"] = display_table["p-value"].map(
+                            lambda value: "<0.000001"
+                            if pd.notna(value) and value < 0.000001
+                            else f"{value:.6f}"
+                            if pd.notna(value)
+                            else "—"
+                        )
+
                         st.dataframe(
-                            anova_table,
+                            display_table[
+                                ["Effect", "Sum of Squares", "df", "F", "p-value"]
+                            ],
                             use_container_width=True,
                             hide_index=True
                         )
@@ -812,37 +854,30 @@ if uploaded_file is not None:
                             two_way_result["Observations"]
                         )
 
-                        st.write(
-                            "The table reports the effects of each factor "
-                            "and their interaction."
+                        st.caption(
+                            f"Significance level: α = {two_way_alpha}. "
+                            "The interaction tests whether the effect of one "
+                            "factor depends on the level of the other factor."
                         )
 
                         for _, row in anova_table.iterrows():
 
-                            source = row["Source"]
+                            source = format_anova_source(row["Source"])
                             p_value = row["P-Value"]
 
                             if pd.isna(p_value):
                                 continue
 
                             if p_value < two_way_alpha:
-                                st.warning(
-                                    f"{source}: significant at "
-                                    f"α = {two_way_alpha} "
+                                st.info(
+                                    f"**{source}** is significant "
                                     f"(p = {p_value:.6f})."
                                 )
                             else:
-                                st.success(
-                                    f"{source}: not significant at "
-                                    f"α = {two_way_alpha} "
+                                st.info(
+                                    f"**{source}** is not significant "
                                     f"(p = {p_value:.6f})."
                                 )
-
-                        st.caption(
-                            "The interaction term tests whether the effect "
-                            "of one factor depends on the level of the "
-                            "other factor."
-                        )
 
 
     except Exception as e:
