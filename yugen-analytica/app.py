@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from scipy import stats
 
 from src.data_loader import (
     load_dataset,
@@ -15,7 +16,6 @@ from src.statistics import (
     two_sample_t_test,
     one_way_anova,
     two_way_anova,
-    f_critical_value,
 )
 
 from src.visualization import (
@@ -689,8 +689,8 @@ if uploaded_file is not None:
                             )
 
 
-                        f_tabulated = f_critical_value(
-                            anova_alpha,
+                        f_tabulated = stats.f.ppf(
+                            1 - anova_alpha,
                             anova_result["Between-Group DF"],
                             anova_result["Within-Group DF"]
                         )
@@ -863,8 +863,8 @@ if uploaded_file is not None:
                         )
 
                         display_table["Ftab"] = display_table.apply(
-                            lambda row: f_critical_value(
-                                two_way_alpha,
+                            lambda row: stats.f.ppf(
+                                1 - two_way_alpha,
                                 row["df"],
                                 residual_df
                             )
