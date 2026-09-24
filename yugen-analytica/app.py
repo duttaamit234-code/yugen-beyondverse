@@ -360,6 +360,60 @@ if uploaded_file is not None:
                             test_result["Sample Size"]
                         )
 
+                        t_critical = stats.t.ppf(
+                            1 - (significance_level / 2),
+                            test_result["Degrees of Freedom"]
+                        )
+
+                        t_decision = (
+                            "Significant"
+                            if abs(test_result["T-Statistic"]) > t_critical
+                            else "Not Significant"
+                        )
+
+                        st.write("### t-Test Comparison")
+
+                        t_comparison = pd.DataFrame({
+                            "t-Calculated": [
+                                test_result["T-Statistic"]
+                            ],
+                            "t-Tabulated": [
+                                t_critical
+                            ],
+                            "df": [
+                                test_result["Degrees of Freedom"]
+                            ],
+                            "α": [
+                                significance_level
+                            ],
+                            "Decision": [
+                                t_decision
+                            ],
+                        })
+
+                        st.dataframe(
+                            t_comparison.style.format({
+                                "t-Calculated": "{:.4f}",
+                                "t-Tabulated": "{:.4f}",
+                                "α": "{:.2f}",
+                            }),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                        if abs(test_result["T-Statistic"]) > t_critical:
+                            st.warning(
+                                f"|t-calculated| ({abs(test_result['T-Statistic']):.4f}) "
+                                f"> t-tabulated ({t_critical:.4f}). "
+                                "Reject the null hypothesis."
+                            )
+                        else:
+                            st.success(
+                                f"|t-calculated| ({abs(test_result['T-Statistic']):.4f}) "
+                                f"≤ t-tabulated ({t_critical:.4f}). "
+                                "Fail to reject the null hypothesis."
+                            )
+
 
                     if test_result["P-Value"] < significance_level:
 
@@ -542,6 +596,61 @@ if uploaded_file is not None:
                                 st.metric(
                                     "Degrees of Freedom",
                                     f"{two_sample_result['Degrees of Freedom']:.4f}"
+                                )
+
+                            t_critical = stats.t.ppf(
+                                1 - (two_sample_alpha / 2),
+                                two_sample_result["Degrees of Freedom"]
+                            )
+
+                            t_decision = (
+                                "Significant"
+                                if abs(two_sample_result["T-Statistic"]) > t_critical
+                                else "Not Significant"
+                            )
+
+                            st.write("### t-Test Comparison")
+
+                            t_comparison = pd.DataFrame({
+                                "t-Calculated": [
+                                    two_sample_result["T-Statistic"]
+                                ],
+                                "t-Tabulated": [
+                                    t_critical
+                                ],
+                                "df": [
+                                    two_sample_result["Degrees of Freedom"]
+                                ],
+                                "α": [
+                                    two_sample_alpha
+                                ],
+                                "Decision": [
+                                    t_decision
+                                ],
+                            })
+
+                            st.dataframe(
+                                t_comparison.style.format({
+                                    "t-Calculated": "{:.4f}",
+                                    "t-Tabulated": "{:.4f}",
+                                    "df": "{:.4f}",
+                                    "α": "{:.2f}",
+                                }),
+                                use_container_width=True,
+                                hide_index=True
+                            )
+
+                            if abs(two_sample_result["T-Statistic"]) > t_critical:
+                                st.warning(
+                                    f"|t-calculated| ({abs(two_sample_result['T-Statistic']):.4f}) "
+                                    f"> t-tabulated ({t_critical:.4f}). "
+                                    "Reject the null hypothesis."
+                                )
+                            else:
+                                st.success(
+                                    f"|t-calculated| ({abs(two_sample_result['T-Statistic']):.4f}) "
+                                    f"≤ t-tabulated ({t_critical:.4f}). "
+                                    "Fail to reject the null hypothesis."
                                 )
 
 
