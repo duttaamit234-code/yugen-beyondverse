@@ -1,5 +1,7 @@
 import pandas as pd
 import streamlit as st
+
+# StatsYuri web build: keep the statistical modules synchronized with this app.
 from scipy import stats
 
 from src.data_loader import (
