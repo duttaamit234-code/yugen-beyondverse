@@ -589,3 +589,127 @@ def levene_variance_test(df, value_column, group_column):
         "F-Statistic": result.statistic,
         "P-Value": result.pvalue,
     }
+
+
+def cohens_d_independent(df, column_1, column_2):
+    """Calculate Cohen's d for two independent numerical samples."""
+    group1 = pd.to_numeric(df[column_1], errors="coerce").dropna()
+    group2 = pd.to_numeric(df[column_2], errors="coerce").dropna()
+    if len(group1) < 2 or len(group2) < 2:
+        return None
+    pooled_sd = (
+        ((len(group1) - 1) * group1.var(ddof=1)
+         + (len(group2) - 1) * group2.var(ddof=1))
+        / (len(group1) + len(group2) - 2)
+    ) ** 0.5
+    if pooled_sd == 0:
+        return None
+    d = (group1.mean() - group2.mean()) / pooled_sd
+    return {"Cohen's d": d, "Group 1": column_1, "Group 2": column_2}
+
+
+def one_way_eta_squared(anova_result):
+    """Calculate eta-squared from one-way ANOVA summary values."""
+    if anova_result is None:
+        return None
+    k = anova_result["Number of Groups"]
+    n = anova_result["Total Sample Size"]
+    f_value = anova_result["F-Statistic"]
+    if k <= 1 or n <= k or f_value < 0:
+        return None
+    eta_squared = (f_value * (k - 1)) / (
+        f_value * (k - 1) + (n - k)
+    )
+    return eta_squared
+
+
+def cramers_v(df, factor1, factor2):
+    """Calculate Cramer's V for a contingency table."""
+    data = df[[factor1, factor2]].dropna()
+    table = pd.crosstab(data[factor1], data[factor2])
+    if table.shape[0] < 2 or table.shape[1] < 2:
+        return None
+    chi_square = stats.chi2_contingency(table, correction=False)[0]
+    n = table.to_numpy().sum()
+    phi2 = chi_square / n
+    rows, columns = table.shape
+    denominator = min(rows - 1, columns - 1)
+    if denominator <= 0:
+        return None
+    return (phi2 / denominator) ** 0.5
+
+
+def tukey_hsd_posthoc(df, value_column, group_column):
+    """Perform Tukey HSD pairwise comparisons after one-way ANOVA."""
+    data = df[[value_column, group_column]].dropna().copy()
+    data[value_column] = pd.to_numeric(data[value_column], errors="coerce")
+    data = data.dropna()
+    if data[group_column].nunique() < 3:
+        return None
+    from statsmodels.stats.multicomp import pairwise_tukeyhsd
+    result = pairwise_tukeyhsd(
+        data[value_column],
+        data[group_column],
+        alpha=0.05
+    )
+    table = pd.DataFrame(
+        data=result._results_table.data[1:],
+        columns=result._results_table.data[0]
+    )
+    return table
+
+
+def kruskal_wallis_test(df, value_column, group_column):
+    """Perform a Kruskal-Wallis test across three or more independent groups."""
+    groups = []
+    labels = []
+    for label in df[group_column].dropna().unique():
+        values = pd.to_numeric(
+            df.loc[df[group_column] == label, value_column],
+            errors="coerce"
+        ).dropna()
+        if len(values) >= 2:
+            labels.append(label)
+            groups.append(values)
+    if len(groups) < 3:
+        return None
+    statistic, p_value = stats.kruskal(*groups)
+    return {
+        "Groups": labels,
+        "Group Sizes": [len(group) for group in groups],
+        "H-Statistic": statistic,
+        "P-Value": p_value,
+        "Degrees of Freedom": len(groups) - 1,
+    }
+
+
+def multiple_linear_regression(df, response_column, predictor_columns):
+    """Perform multiple linear regression using selected numerical predictors."""
+    if not predictor_columns or response_column in predictor_columns:
+        return None
+    columns = [response_column] + predictor_columns
+    data = df[columns].apply(pd.to_numeric, errors="coerce").dropna()
+    if len(data) <= len(predictor_columns) + 1:
+        return None
+    if any(data[column].nunique() < 2 for column in predictor_columns):
+        return None
+    import statsmodels.api as sm
+    x = sm.add_constant(data[predictor_columns], has_constant="add")
+    model = sm.OLS(data[response_column], x).fit()
+    coefficients = pd.DataFrame({
+        "Variable": model.params.index,
+        "Coefficient": model.params.values,
+        "Standard Error": model.bse.values,
+        "t-Statistic": model.tvalues.values,
+        "p-value": model.pvalues.values,
+    })
+    return {
+        "Response": response_column,
+        "Predictors": predictor_columns,
+        "Observations": len(data),
+        "R-Squared": model.rsquared,
+        "Adjusted R-Squared": model.rsquared_adj,
+        "F-Statistic": model.fvalue,
+        "Model P-Value": model.f_pvalue,
+        "Coefficients": coefficients,
+    }
