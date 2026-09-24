@@ -15,6 +15,7 @@ from src.statistics import (
     two_sample_t_test,
     one_way_anova,
     two_way_anova,
+    f_critical_value,
 )
 
 from src.visualization import (
@@ -688,22 +689,55 @@ if uploaded_file is not None:
                             )
 
 
-                        if anova_result["P-Value"] < anova_alpha:
+                        f_tabulated = f_critical_value(
+                            anova_alpha,
+                            anova_result["Between-Group DF"],
+                            anova_result["Within-Group DF"]
+                        )
+
+                        st.write("### F-Test Comparison")
+
+                        f_comparison = pd.DataFrame({
+                            "F-Calculated": [
+                                anova_result["F-Statistic"]
+                            ],
+                            "F-Tabulated": [
+                                f_tabulated
+                            ],
+                            "Significance Level (α)": [
+                                anova_alpha
+                            ],
+                            "Decision": [
+                                "Significant"
+                                if anova_result["F-Statistic"] > f_tabulated
+                                else "Not Significant"
+                            ],
+                        })
+
+                        st.dataframe(
+                            f_comparison.style.format({
+                                "F-Calculated": "{:.4f}",
+                                "F-Tabulated": "{:.4f}",
+                                "Significance Level (α)": "{:.2f}",
+                            }),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                        if anova_result["F-Statistic"] > f_tabulated:
 
                             st.warning(
-                                f"Reject the null hypothesis at "
-                                f"α = {anova_alpha}. "
-                                "The sample provides evidence that "
-                                "at least one population mean differs."
+                                f"F-calculated ({anova_result['F-Statistic']:.4f}) "
+                                f"> F-tabulated ({f_tabulated:.4f}) at "
+                                f"α = {anova_alpha}. Reject the null hypothesis."
                             )
 
                         else:
 
                             st.success(
-                                f"Fail to reject the null hypothesis "
-                                f"at α = {anova_alpha}. "
-                                "The sample does not provide sufficient "
-                                "evidence that the population means differ."
+                                f"F-calculated ({anova_result['F-Statistic']:.4f}) "
+                                f"≤ F-tabulated ({f_tabulated:.4f}) at "
+                                f"α = {anova_alpha}. Fail to reject the null hypothesis."
                             )
 
 
@@ -809,12 +843,17 @@ if uploaded_file is not None:
                                 return parts
                             return source
 
+                        residual_df = anova_table.loc[
+                            anova_table["Source"] == "Residual",
+                            "Degrees of Freedom"
+                        ].iloc[0]
+
                         display_table = anova_table.rename(
                             columns={
                                 "Source": "Effect",
                                 "Sum of Squares": "Sum of Squares",
                                 "Degrees of Freedom": "df",
-                                "F-Statistic": "F",
+                                "F-Statistic": "Fcal",
                                 "P-Value": "p-value",
                             }
                         ).copy()
@@ -823,12 +862,40 @@ if uploaded_file is not None:
                             format_anova_source
                         )
 
+                        display_table["Ftab"] = display_table.apply(
+                            lambda row: f_critical_value(
+                                two_way_alpha,
+                                row["df"],
+                                residual_df
+                            )
+                            if pd.notna(row["Fcal"])
+                            else float("nan"),
+                            axis=1
+                        )
+
+                        display_table["Decision"] = display_table.apply(
+                            lambda row: (
+                                "Significant"
+                                if pd.notna(row["Fcal"])
+                                and row["Fcal"] > row["Ftab"]
+                                else "Not Significant"
+                                if pd.notna(row["Fcal"])
+                                else "—"
+                            ),
+                            axis=1
+                        )
+
                         display_table["df"] = display_table["df"].map(
                             lambda value: f"{value:.0f}"
                             if pd.notna(value) else ""
                         )
 
-                        display_table["F"] = display_table["F"].map(
+                        display_table["Fcal"] = display_table["Fcal"].map(
+                            lambda value: f"{value:.4f}"
+                            if pd.notna(value) else "—"
+                        )
+
+                        display_table["Ftab"] = display_table["Ftab"].map(
                             lambda value: f"{value:.4f}"
                             if pd.notna(value) else "—"
                         )
@@ -843,7 +910,15 @@ if uploaded_file is not None:
 
                         st.dataframe(
                             display_table[
-                                ["Effect", "Sum of Squares", "df", "F", "p-value"]
+                                [
+                                    "Effect",
+                                    "Sum of Squares",
+                                    "df",
+                                    "Fcal",
+                                    "Ftab",
+                                    "p-value",
+                                    "Decision",
+                                ]
                             ],
                             use_container_width=True,
                             hide_index=True
