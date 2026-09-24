@@ -156,6 +156,55 @@ def one_way_anova(df, value_column, group_column):
     }
 
 
+
+def two_way_anova(df, value_column, factor1, factor2):
+    """Perform a two-way ANOVA with main effects and interaction."""
+
+    data = df[[value_column, factor1, factor2]].dropna().copy()
+
+    if (
+        data.empty
+        or data[value_column].nunique() < 2
+        or data[factor1].nunique() < 2
+        or data[factor2].nunique() < 2
+    ):
+        return None
+
+    try:
+        from statsmodels.formula.api import ols
+        from statsmodels.stats.anova import anova_lm
+
+        formula = (
+            f'Q("{value_column}") ~ '
+            f'C(Q("{factor1}")) * C(Q("{factor2}"))'
+        )
+
+        model = ols(formula, data=data).fit()
+        anova_table = anova_lm(model, typ=2)
+
+        results = []
+
+        for source in anova_table.index:
+            results.append({
+                "Source": source,
+                "Sum of Squares": anova_table.loc[source, "sum_sq"],
+                "Degrees of Freedom": anova_table.loc[source, "df"],
+                "F-Statistic": anova_table.loc[source, "F"],
+                "P-Value": anova_table.loc[source, "PR(>F)"],
+            })
+
+        return {
+            "ANOVA Table": pd.DataFrame(results),
+            "Observations": len(data),
+            "Factor 1": factor1,
+            "Factor 2": factor2,
+            "Response": value_column,
+        }
+
+    except Exception:
+        return None
+
+
 def two_sample_t_test(
     df,
     value_column,
