@@ -414,3 +414,50 @@ def two_sample_t_test_wide(df, value_column_1, value_column_2):
         "P-Value": p_value,
         "Degrees of Freedom": degrees_of_freedom,
     }
+
+def calculate_confidence_intervals(df, alpha=0.05):
+    """Calculate t-based confidence intervals for numerical column means."""
+
+    numeric_df = df.select_dtypes(include="number")
+
+    if numeric_df.empty:
+        return pd.DataFrame()
+
+    results = []
+
+    for column in numeric_df.columns:
+
+        data = pd.to_numeric(
+            numeric_df[column],
+            errors="coerce"
+        ).dropna()
+
+        n = len(data)
+
+        if n < 2:
+            continue
+
+        mean = data.mean()
+        standard_deviation = data.std(ddof=1)
+        standard_error = standard_deviation / (n ** 0.5)
+        degrees_of_freedom = n - 1
+
+        t_critical = stats.t.ppf(
+            1 - (alpha / 2),
+            degrees_of_freedom
+        )
+
+        margin_of_error = t_critical * standard_error
+
+        results.append({
+            "Variable": column,
+            "Sample Size": n,
+            "Mean": mean,
+            "Standard Deviation": standard_deviation,
+            "Standard Error": standard_error,
+            "t-Critical": t_critical,
+            "Lower Limit": mean - margin_of_error,
+            "Upper Limit": mean + margin_of_error,
+        })
+
+    return pd.DataFrame(results)
