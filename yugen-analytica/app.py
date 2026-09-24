@@ -1715,6 +1715,8 @@ if uploaded_file is not None:
                         )
 
 
+        anova_group_columns = []
+
         st.subheader("One-Way ANOVA")
 
         st.write(
@@ -2055,7 +2057,8 @@ if uploaded_file is not None:
                         tukey = tukey_hsd_posthoc(
                             df,
                             effect_value,
-                            effect_group
+                            effect_group,
+                            alpha=anova_alpha
                         )
 
                         if tukey is not None:
