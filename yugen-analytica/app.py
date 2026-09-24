@@ -16,6 +16,8 @@ from src.statistics import (
     simple_linear_regression,
     wilcoxon_signed_rank_test,
     mann_whitney_u_test,
+    shapiro_wilk_test,
+    levene_variance_test,
     detect_outliers,
     calculate_correlation,
     one_sample_t_test,
@@ -127,6 +129,171 @@ if uploaded_file is not None:
 
 
         numeric_columns = get_numeric_columns(df)
+
+
+
+        st.subheader("Assumption Checking")
+
+        st.write(
+            "Check common assumptions used by parametric methods. "
+            "These diagnostics support, but do not replace, knowledge "
+            "of the study design."
+        )
+
+        if numeric_columns:
+
+            st.write("### Normality Check")
+
+            normality_column = st.selectbox(
+                "Select a numerical variable",
+                numeric_columns,
+                key="assumption_normality_column"
+            )
+
+            normality_alpha = st.selectbox(
+                "Normality Significance Level (α)",
+                [0.01, 0.05, 0.10],
+                index=1,
+                key="assumption_normality_alpha"
+            )
+
+            normality_result = shapiro_wilk_test(
+                df,
+                normality_column
+            )
+
+            if normality_result is None:
+                st.info(
+                    "At least 3 valid observations are required "
+                    "for the Shapiro-Wilk test."
+                )
+            else:
+                normality_decision = (
+                    "Normality rejected"
+                    if normality_result["P-Value"] < normality_alpha
+                    else "Normality not rejected"
+                )
+
+                normality_table = pd.DataFrame({
+                    "Variable": [normality_result["Variable"]],
+                    "n": [normality_result["Sample Size"]],
+                    "W": [normality_result["W-Statistic"]],
+                    "p-value": [normality_result["P-Value"]],
+                    "Decision": [normality_decision],
+                })
+
+                st.dataframe(
+                    normality_table.style.format({
+                        "W": "{:.4f}",
+                        "p-value": lambda value:
+                            "<0.000001"
+                            if value < 0.000001
+                            else f"{value:.6f}",
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                if normality_result["P-Value"] < normality_alpha:
+                    st.warning(
+                        "The Shapiro-Wilk test provides evidence "
+                        "against normality at the selected level."
+                    )
+                else:
+                    st.success(
+                        "The Shapiro-Wilk test does not provide "
+                        "sufficient evidence to reject normality."
+                    )
+
+            st.write("### Equal Variance Check")
+
+            categorical_columns = [
+                column
+                for column in df.columns
+                if not pd.api.types.is_numeric_dtype(df[column])
+                and df[column].nunique(dropna=True) >= 2
+            ]
+
+            if not categorical_columns:
+                st.info(
+                    "No suitable categorical grouping variable "
+                    "was found for Levene's test."
+                )
+            else:
+                levene_group = st.selectbox(
+                    "Grouping variable",
+                    categorical_columns,
+                    key="assumption_levene_group"
+                )
+
+                levene_value = st.selectbox(
+                    "Numerical response",
+                    numeric_columns,
+                    key="assumption_levene_value"
+                )
+
+                levene_alpha = st.selectbox(
+                    "Equal Variance Significance Level (α)",
+                    [0.01, 0.05, 0.10],
+                    index=1,
+                    key="assumption_levene_alpha"
+                )
+
+                levene_result = levene_variance_test(
+                    df,
+                    levene_value,
+                    levene_group
+                )
+
+                if levene_result is None:
+                    st.info(
+                        "At least two groups with at least two valid "
+                        "observations each are required."
+                    )
+                else:
+                    levene_decision = (
+                        "Unequal variances detected"
+                        if levene_result["P-Value"] < levene_alpha
+                        else "Equal variance assumption not rejected"
+                    )
+
+                    levene_table = pd.DataFrame({
+                        "Response": [levene_result["Value Variable"]],
+                        "Groups": [levene_result["Groups"]],
+                        "Levene F": [levene_result["F-Statistic"]],
+                        "p-value": [levene_result["P-Value"]],
+                        "Decision": [levene_decision],
+                    })
+
+                    st.dataframe(
+                        levene_table.style.format({
+                            "Levene F": "{:.4f}",
+                            "p-value": lambda value:
+                                "<0.000001"
+                                if value < 0.000001
+                                else f"{value:.6f}",
+                        }),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    if levene_result["P-Value"] < levene_alpha:
+                        st.warning(
+                            "The equal-variance assumption is not "
+                            "supported by Levene's test. Consider a "
+                            "method that does not require equal variances, "
+                            "where appropriate."
+                        )
+                    else:
+                        st.success(
+                            "Levene's test does not provide sufficient "
+                            "evidence against equal variances."
+                        )
+
+        else:
+            st.info(
+                "Numerical variables are required for assumption checking."
+            )
 
 
         st.subheader("Descriptive Statistics")
