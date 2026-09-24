@@ -106,6 +106,83 @@ if uploaded_file is not None:
             )
 
 
+        st.subheader("Data Cleaning")
+
+        st.write(
+            "Create a cleaned copy of the uploaded dataset without changing "
+            "the original upload."
+        )
+
+        cleaning_option = st.selectbox(
+            "Missing-value handling",
+            [
+                "Keep missing values",
+                "Drop rows with missing values",
+                "Fill numerical missing values with the column median",
+            ],
+            key="cleaning_option"
+        )
+
+        remove_duplicates = st.checkbox(
+            "Remove duplicate rows",
+            value=False,
+            key="cleaning_duplicates"
+        )
+
+        cleaned_df = df.copy()
+
+        if cleaning_option == "Drop rows with missing values":
+            cleaned_df = cleaned_df.dropna()
+        elif cleaning_option == "Fill numerical missing values with the column median":
+            for column in cleaned_df.select_dtypes(include="number").columns:
+                cleaned_df[column] = cleaned_df[column].fillna(
+                    cleaned_df[column].median()
+                )
+
+        duplicate_count = int(len(cleaned_df) - len(cleaned_df.drop_duplicates()))
+
+        if remove_duplicates:
+            cleaned_df = cleaned_df.drop_duplicates()
+
+        cleaning_summary = pd.DataFrame({
+            "Metric": [
+                "Original rows",
+                "Cleaned rows",
+                "Rows removed",
+                "Original missing values",
+                "Cleaned missing values",
+                "Duplicate rows removed",
+            ],
+            "Value": [
+                len(df),
+                len(cleaned_df),
+                len(df) - len(cleaned_df),
+                int(df.isna().sum().sum()),
+                int(cleaned_df.isna().sum().sum()),
+                duplicate_count if remove_duplicates else 0,
+            ],
+        })
+
+        st.dataframe(
+            cleaning_summary,
+            use_container_width=True,
+            hide_index=True
+        )
+
+        st.write("### Cleaned Dataset Preview")
+        st.dataframe(
+            cleaned_df.head(20),
+            use_container_width=True
+        )
+
+        st.download_button(
+            "Download Cleaned Dataset",
+            data=cleaned_df.to_csv(index=False).encode("utf-8"),
+            file_name="statsyuri_cleaned_dataset.csv",
+            mime="text/csv"
+        )
+
+
         st.subheader("Dataset Summary")
 
         summary = get_dataset_summary(df)
@@ -133,6 +210,50 @@ if uploaded_file is not None:
                 "Missing Values",
                 summary["missing_values"]
             )
+
+
+        st.subheader("Analysis Report")
+
+        report_lines = [
+            "StatsYuri Analysis Report",
+            "=========================",
+            "",
+            f"Rows: {summary['rows']}",
+            f"Columns: {summary['columns']}",
+            f"Missing values: {summary['missing_values']}",
+            "",
+            "Descriptive Statistics",
+            "----------------------",
+        ]
+
+        report_lines.append(
+            statistics.to_string(index=False)
+            if not statistics.empty
+            else "No numerical variables available."
+        )
+
+        report_lines.extend([
+            "",
+            "Outlier Summary",
+            "---------------",
+            outlier_results.to_string(index=False)
+            if not outlier_results.empty
+            else "No numerical variables available.",
+            "",
+            "Notes",
+            "-----",
+            "Interpret statistical results together with study design, "
+            "assumptions, effect sizes, and practical context.",
+        ])
+
+        analysis_report = "\n".join(report_lines)
+
+        st.download_button(
+            "Download Analysis Report",
+            data=analysis_report.encode("utf-8"),
+            file_name="statsyuri_analysis_report.txt",
+            mime="text/plain"
+        )
 
 
         numeric_columns = get_numeric_columns(df)
