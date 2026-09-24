@@ -16,6 +16,8 @@ from src.statistics import (
     two_sample_t_test,
     one_way_anova,
     two_way_anova,
+    chi_square_goodness_of_fit,
+    chi_square_independence,
 )
 
 from src.visualization import (
@@ -746,6 +748,269 @@ if uploaded_file is not None:
                             "A significant result indicates that at least "
                             "one mean differs, but does not identify which "
                             "groups differ."
+                        )
+
+
+
+        st.subheader("Chi-Square Tests")
+
+        st.write(
+            "Perform chi-square goodness-of-fit and test-of-independence "
+            "procedures using calculated and tabulated chi-square values."
+        )
+
+        categorical_columns = [
+            column
+            for column in df.columns
+            if column not in numeric_columns
+            and df[column].nunique(dropna=True) >= 2
+        ]
+
+        if not categorical_columns:
+
+            st.info(
+                "At least one categorical column with two or more "
+                "categories is required for chi-square testing."
+            )
+
+        else:
+
+            st.write("### Chi-Square Goodness-of-Fit")
+
+            st.caption(
+                "Tests whether the observed category frequencies are "
+                "consistent with equal expected frequencies."
+            )
+
+            chi_gof_column = st.selectbox(
+                "Select a categorical variable",
+                categorical_columns,
+                key="chi_gof_column"
+            )
+
+            chi_gof_alpha = st.selectbox(
+                "Goodness-of-Fit Significance Level (α)",
+                [0.01, 0.05, 0.10],
+                index=1,
+                key="chi_gof_alpha"
+            )
+
+            if st.button("Run Chi-Square Goodness-of-Fit"):
+
+                chi_gof_result = chi_square_goodness_of_fit(
+                    df,
+                    chi_gof_column
+                )
+
+                if chi_gof_result is None:
+
+                    st.error(
+                        "At least two categories with valid observations "
+                        "are required."
+                    )
+
+                else:
+
+                    gof_summary = pd.DataFrame({
+                        "Category": chi_gof_result["Categories"],
+                        "Observed": chi_gof_result["Observed"],
+                        "Expected": chi_gof_result["Expected"],
+                    })
+
+                    st.dataframe(
+                        gof_summary.style.format({
+                            "Expected": "{:.2f}"
+                        }),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    gof_f_tabulated = stats.chi2.ppf(
+                        1 - chi_gof_alpha,
+                        chi_gof_result["Degrees of Freedom"]
+                    )
+
+                    gof_decision = (
+                        "Significant"
+                        if chi_gof_result["Chi-Square"] > gof_f_tabulated
+                        else "Not Significant"
+                    )
+
+                    gof_result_table = pd.DataFrame({
+                        "χ²-Calculated": [
+                            chi_gof_result["Chi-Square"]
+                        ],
+                        "χ²-Tabulated": [
+                            gof_f_tabulated
+                        ],
+                        "df": [
+                            chi_gof_result["Degrees of Freedom"]
+                        ],
+                        "p-value": [
+                            chi_gof_result["P-Value"]
+                        ],
+                        "Decision": [
+                            gof_decision
+                        ],
+                    })
+
+                    st.dataframe(
+                        gof_result_table.style.format({
+                            "χ²-Calculated": "{:.4f}",
+                            "χ²-Tabulated": "{:.4f}",
+                            "p-value": lambda value:
+                                "<0.000001"
+                                if value < 0.000001
+                                else f"{value:.6f}",
+                        }),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    if gof_decision == "Significant":
+                        st.warning(
+                            f"χ²-calculated ({chi_gof_result['Chi-Square']:.4f}) "
+                            f"> χ²-tabulated ({gof_f_tabulated:.4f}). "
+                            "Reject the null hypothesis."
+                        )
+                    else:
+                        st.success(
+                            f"χ²-calculated ({chi_gof_result['Chi-Square']:.4f}) "
+                            f"≤ χ²-tabulated ({gof_f_tabulated:.4f}). "
+                            "Fail to reject the null hypothesis."
+                        )
+
+            st.write("### Chi-Square Test of Independence")
+
+            st.caption(
+                "Tests whether two categorical variables are statistically independent."
+            )
+
+            if len(categorical_columns) < 2:
+
+                st.info(
+                    "At least two categorical columns are required "
+                    "for a test of independence."
+                )
+
+            else:
+
+                chi_ind_factor1 = st.selectbox(
+                    "Select Variable 1",
+                    categorical_columns,
+                    key="chi_ind_factor1"
+                )
+
+                remaining_chi_columns = [
+                    column
+                    for column in categorical_columns
+                    if column != chi_ind_factor1
+                ]
+
+                chi_ind_factor2 = st.selectbox(
+                    "Select Variable 2",
+                    remaining_chi_columns,
+                    key="chi_ind_factor2"
+                )
+
+                chi_ind_alpha = st.selectbox(
+                    "Independence Test Significance Level (α)",
+                    [0.01, 0.05, 0.10],
+                    index=1,
+                    key="chi_ind_alpha"
+                )
+
+                if st.button("Run Chi-Square Test of Independence"):
+
+                    chi_ind_result = chi_square_independence(
+                        df,
+                        chi_ind_factor1,
+                        chi_ind_factor2
+                    )
+
+                    if chi_ind_result is None:
+
+                        st.error(
+                            "The selected variables must each contain "
+                            "at least two valid categories."
+                        )
+
+                    else:
+
+                        st.write("#### Observed Frequencies")
+
+                        st.dataframe(
+                            chi_ind_result["Observed Table"],
+                            use_container_width=True
+                        )
+
+                        st.write("#### Expected Frequencies")
+
+                        st.dataframe(
+                            chi_ind_result["Expected Table"].style.format(
+                                "{:.2f}"
+                            ),
+                            use_container_width=True
+                        )
+
+                        chi_ind_tabulated = stats.chi2.ppf(
+                            1 - chi_ind_alpha,
+                            chi_ind_result["Degrees of Freedom"]
+                        )
+
+                        chi_ind_decision = (
+                            "Significant"
+                            if chi_ind_result["Chi-Square"] > chi_ind_tabulated
+                            else "Not Significant"
+                        )
+
+                        chi_ind_result_table = pd.DataFrame({
+                            "χ²-Calculated": [
+                                chi_ind_result["Chi-Square"]
+                            ],
+                            "χ²-Tabulated": [
+                                chi_ind_tabulated
+                            ],
+                            "df": [
+                                chi_ind_result["Degrees of Freedom"]
+                            ],
+                            "p-value": [
+                                chi_ind_result["P-Value"]
+                            ],
+                            "Decision": [
+                                chi_ind_decision
+                            ],
+                        })
+
+                        st.dataframe(
+                            chi_ind_result_table.style.format({
+                                "χ²-Calculated": "{:.4f}",
+                                "χ²-Tabulated": "{:.4f}",
+                                "p-value": lambda value:
+                                    "<0.000001"
+                                    if value < 0.000001
+                                    else f"{value:.6f}",
+                            }),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                        if chi_ind_decision == "Significant":
+                            st.warning(
+                                f"χ²-calculated ({chi_ind_result['Chi-Square']:.4f}) "
+                                f"> χ²-tabulated ({chi_ind_tabulated:.4f}). "
+                                "Reject the null hypothesis of independence."
+                            )
+                        else:
+                            st.success(
+                                f"χ²-calculated ({chi_ind_result['Chi-Square']:.4f}) "
+                                f"≤ χ²-tabulated ({chi_ind_tabulated:.4f}). "
+                                "Fail to reject the null hypothesis of independence."
+                            )
+
+                        st.metric(
+                            "Observations Used",
+                            chi_ind_result["Observations"]
                         )
 
 
