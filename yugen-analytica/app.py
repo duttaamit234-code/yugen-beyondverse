@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 
 # StatsYuri web build: keep the statistical modules synchronized with this app.
+# Assumption diagnostics: Shapiro-Wilk and Levene tests are provided by src.statistics.
 from scipy import stats
 
 from src.data_loader import (
