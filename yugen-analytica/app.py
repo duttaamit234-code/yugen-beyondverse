@@ -123,6 +123,9 @@ if uploaded_file is not None:
             )
 
 
+        numeric_columns = get_numeric_columns(df)
+
+
         st.subheader("Descriptive Statistics")
 
         statistics = get_numeric_statistics(df)
@@ -244,9 +247,6 @@ if uploaded_file is not None:
 
 
         st.subheader("Data Visualization")
-
-        numeric_columns = get_numeric_columns(df)
-
 
         if not numeric_columns:
 
