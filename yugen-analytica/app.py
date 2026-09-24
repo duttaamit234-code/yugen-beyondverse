@@ -14,6 +14,8 @@ from src.statistics import (
     get_numeric_statistics,
     calculate_confidence_intervals,
     simple_linear_regression,
+    wilcoxon_signed_rank_test,
+    mann_whitney_u_test,
     detect_outliers,
     calculate_correlation,
     one_sample_t_test,
@@ -288,6 +290,250 @@ if uploaded_file is not None:
                 box_plot,
                 use_container_width=True
             )
+
+
+        st.subheader("Non-Parametric Tests")
+
+        st.write(
+            "Perform distribution-free hypothesis tests when the "
+            "assumptions of parametric tests may not be appropriate."
+        )
+
+        st.write("### Wilcoxon Signed-Rank Test")
+
+        st.caption(
+            "One-sample non-parametric test for a hypothesized population median."
+        )
+
+        if not numeric_columns:
+
+            st.info(
+                "At least one numerical column is required."
+            )
+
+        else:
+
+            wilcoxon_column = st.selectbox(
+                "Select numerical variable",
+                numeric_columns,
+                key="wilcoxon_column"
+            )
+
+            wilcoxon_median = st.number_input(
+                "Hypothesized Median",
+                value=0.0,
+                step=1.0,
+                key="wilcoxon_median"
+            )
+
+            wilcoxon_alpha = st.selectbox(
+                "Wilcoxon Significance Level (α)",
+                [0.01, 0.05, 0.10],
+                index=1,
+                key="wilcoxon_alpha"
+            )
+
+            if st.button(
+                "Run Wilcoxon Signed-Rank Test",
+                key="run_wilcoxon"
+            ):
+
+                wilcoxon_result = wilcoxon_signed_rank_test(
+                    df,
+                    wilcoxon_column,
+                    wilcoxon_median
+                )
+
+                if wilcoxon_result is None:
+
+                    st.error(
+                        "At least two non-zero valid differences are "
+                        "required for the Wilcoxon signed-rank test."
+                    )
+
+                else:
+
+                    wilcoxon_result_table = pd.DataFrame({
+                        "Statistic": [
+                            "Sample Size",
+                            "Sample Median",
+                            "Hypothesized Median",
+                            "W-Statistic",
+                            "p-value",
+                        ],
+                        "Value": [
+                            wilcoxon_result["Sample Size"],
+                            wilcoxon_result["Sample Median"],
+                            wilcoxon_result["Hypothesized Median"],
+                            wilcoxon_result["W-Statistic"],
+                            wilcoxon_result["P-Value"],
+                        ],
+                    })
+
+                    st.dataframe(
+                        wilcoxon_result_table.style.format({
+                            "Value": "{:.6f}"
+                        }),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    if wilcoxon_result["P-Value"] < wilcoxon_alpha:
+
+                        st.warning(
+                            f"p = {wilcoxon_result['P-Value']:.6f} < "
+                            f"α = {wilcoxon_alpha:.2f}. "
+                            "Reject the null hypothesis."
+                        )
+
+                        st.write(
+                            "### Interpretation"
+                        )
+
+                        st.write(
+                            "There is statistically significant evidence "
+                            "that the population median differs from the "
+                            "hypothesized median."
+                        )
+
+                    else:
+
+                        st.success(
+                            f"p = {wilcoxon_result['P-Value']:.6f} ≥ "
+                            f"α = {wilcoxon_alpha:.2f}. "
+                            "Fail to reject the null hypothesis."
+                        )
+
+                        st.write(
+                            "### Interpretation"
+                        )
+
+                        st.write(
+                            "There is insufficient statistical evidence "
+                            "that the population median differs from the "
+                            "hypothesized median."
+                        )
+
+        st.write("### Mann-Whitney U Test")
+
+        st.caption(
+            "Two-sample non-parametric test for comparing two independent groups."
+        )
+
+        if len(numeric_columns) < 2:
+
+            st.info(
+                "At least two numerical columns are required."
+            )
+
+        else:
+
+            mann_col1, mann_col2 = st.columns(2)
+
+            with mann_col1:
+                mann_group1 = st.selectbox(
+                    "Numerical Group 1",
+                    numeric_columns,
+                    key="mann_group1"
+                )
+
+            remaining_mann_columns = [
+                column
+                for column in numeric_columns
+                if column != mann_group1
+            ]
+
+            with mann_col2:
+                mann_group2 = st.selectbox(
+                    "Numerical Group 2",
+                    remaining_mann_columns,
+                    key="mann_group2"
+                )
+
+            mann_alpha = st.selectbox(
+                "Mann-Whitney Significance Level (α)",
+                [0.01, 0.05, 0.10],
+                index=1,
+                key="mann_alpha"
+            )
+
+            if st.button(
+                "Run Mann-Whitney U Test",
+                key="run_mann_whitney"
+            ):
+
+                mann_result = mann_whitney_u_test(
+                    df,
+                    mann_group1,
+                    mann_group2
+                )
+
+                if mann_result is None:
+
+                    st.error(
+                        "Each group must contain at least two valid observations."
+                    )
+
+                else:
+
+                    mann_result_table = pd.DataFrame({
+                        "Statistic": [
+                            "Group 1 Median",
+                            "Group 2 Median",
+                            "Group 1 Size",
+                            "Group 2 Size",
+                            "U-Statistic",
+                            "p-value",
+                        ],
+                        "Value": [
+                            mann_result["Group 1 Median"],
+                            mann_result["Group 2 Median"],
+                            mann_result["Group 1 Size"],
+                            mann_result["Group 2 Size"],
+                            mann_result["U-Statistic"],
+                            mann_result["P-Value"],
+                        ],
+                    })
+
+                    st.dataframe(
+                        mann_result_table.style.format({
+                            "Value": "{:.6f}"
+                        }),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    if mann_result["P-Value"] < mann_alpha:
+
+                        st.warning(
+                            f"p = {mann_result['P-Value']:.6f} < "
+                            f"α = {mann_alpha:.2f}. "
+                            "Reject the null hypothesis."
+                        )
+
+                        st.write("### Interpretation")
+
+                        st.write(
+                            "There is statistically significant evidence "
+                            "that the two independent groups differ in "
+                            "their distributions."
+                        )
+
+                    else:
+
+                        st.success(
+                            f"p = {mann_result['P-Value']:.6f} ≥ "
+                            f"α = {mann_alpha:.2f}. "
+                            "Fail to reject the null hypothesis."
+                        )
+
+                        st.write("### Interpretation")
+
+                        st.write(
+                            "There is insufficient statistical evidence "
+                            "that the two independent groups differ in "
+                            "their distributions."
+                        )
 
 
         st.subheader("Regression Analysis")
