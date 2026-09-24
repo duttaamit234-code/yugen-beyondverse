@@ -12,6 +12,7 @@ from src.data_loader import (
 
 from src.statistics import (
     get_numeric_statistics,
+    calculate_confidence_intervals,
     detect_outliers,
     calculate_correlation,
     one_sample_t_test,
@@ -140,6 +141,65 @@ if uploaded_file is not None:
                 statistics,
                 use_container_width=True
             )
+
+
+        st.subheader("Confidence Intervals")
+
+        st.write(
+            "Calculate t-based confidence intervals for the means "
+            "of numerical variables."
+        )
+
+        if not numeric_columns:
+
+            st.info(
+                "No numerical columns are available "
+                "for confidence interval estimation."
+            )
+
+        else:
+
+            confidence_level = st.selectbox(
+                "Confidence Level",
+                [0.90, 0.95, 0.99],
+                index=1,
+                format_func=lambda value: f"{value * 100:.0f}%",
+                key="confidence_level"
+            )
+
+            confidence_alpha = 1 - confidence_level
+
+            confidence_results = calculate_confidence_intervals(
+                df,
+                confidence_alpha
+            )
+
+            if confidence_results.empty:
+
+                st.info(
+                    "At least two valid observations are required "
+                    "for confidence interval estimation."
+                )
+
+            else:
+
+                st.dataframe(
+                    confidence_results.style.format({
+                        "Mean": "{:.4f}",
+                        "Standard Deviation": "{:.4f}",
+                        "Standard Error": "{:.4f}",
+                        "t-Critical": "{:.4f}",
+                        "Lower Limit": "{:.4f}",
+                        "Upper Limit": "{:.4f}",
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                st.caption(
+                    "The interval estimates the population mean using "
+                    "the t-distribution."
+                )
 
 
         st.subheader("Outlier Detection")
