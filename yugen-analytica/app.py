@@ -12,6 +12,7 @@ from src.statistics import (
     calculate_correlation,
     one_sample_t_test,
     two_sample_t_test,
+    one_way_anova,
 )
 
 from src.visualization import (
@@ -559,6 +560,157 @@ if uploaded_file is not None:
                                     "The sample does not provide sufficient "
                                     "evidence that the two population means differ."
                                 )
+
+
+        st.subheader("One-Way ANOVA")
+
+        st.write(
+            "Compare the means of three or more independent groups "
+            "using one-way analysis of variance (ANOVA)."
+        )
+
+
+        if len(numeric_columns) == 0:
+
+            st.info(
+                "A numerical column is required for ANOVA."
+            )
+
+        else:
+
+            anova_group_columns = [
+                column
+                for column in df.columns
+                if df[column].nunique(dropna=True) >= 3
+            ]
+
+
+            if not anova_group_columns:
+
+                st.info(
+                    "No grouping column with at least three groups "
+                    "was found."
+                )
+
+            else:
+
+                anova_group_column = st.selectbox(
+                    "Select the ANOVA grouping column",
+                    anova_group_columns,
+                    key="anova_group_column"
+                )
+
+                anova_value_column = st.selectbox(
+                    "Select the ANOVA numerical variable",
+                    numeric_columns,
+                    key="anova_value_column"
+                )
+
+                anova_alpha = st.selectbox(
+                    "ANOVA Significance Level (α)",
+                    [0.01, 0.05, 0.10],
+                    index=1,
+                    key="anova_alpha"
+                )
+
+
+                if st.button("Run One-Way ANOVA"):
+
+                    anova_result = one_way_anova(
+                        df,
+                        anova_value_column,
+                        anova_group_column
+                    )
+
+
+                    if anova_result is None:
+
+                        st.error(
+                            "At least three groups with two or more "
+                            "valid observations each are required."
+                        )
+
+                    else:
+
+                        st.write("### Group Summary")
+
+                        group_summary = {
+                            "Group": anova_result["Group Labels"],
+                            "Sample Size": anova_result["Group Sizes"],
+                            "Mean": anova_result["Group Means"],
+                        }
+
+                        st.dataframe(
+                            group_summary,
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+
+                        result_col1, result_col2 = st.columns(2)
+
+
+                        with result_col1:
+
+                            st.metric(
+                                "F-Statistic",
+                                f"{anova_result['F-Statistic']:.4f}"
+                            )
+
+                            st.metric(
+                                "Between-Group DF",
+                                anova_result["Between-Group DF"]
+                            )
+
+                            st.metric(
+                                "Within-Group DF",
+                                anova_result["Within-Group DF"]
+                            )
+
+
+                        with result_col2:
+
+                            st.metric(
+                                "P-Value",
+                                f"{anova_result['P-Value']:.6f}"
+                            )
+
+                            st.metric(
+                                "Number of Groups",
+                                anova_result["Number of Groups"]
+                            )
+
+                            st.metric(
+                                "Total Sample Size",
+                                anova_result["Total Sample Size"]
+                            )
+
+
+                        if anova_result["P-Value"] < anova_alpha:
+
+                            st.warning(
+                                f"Reject the null hypothesis at "
+                                f"α = {anova_alpha}. "
+                                "The sample provides evidence that "
+                                "at least one population mean differs."
+                            )
+
+                        else:
+
+                            st.success(
+                                f"Fail to reject the null hypothesis "
+                                f"at α = {anova_alpha}. "
+                                "The sample does not provide sufficient "
+                                "evidence that the population means differ."
+                            )
+
+
+                        st.caption(
+                            "ANOVA tests whether all group means are equal. "
+                            "A significant result indicates that at least "
+                            "one mean differs, but does not identify which "
+                            "groups differ."
+                        )
 
 
     except Exception as e:
