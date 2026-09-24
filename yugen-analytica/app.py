@@ -1435,31 +1435,8 @@ if uploaded_file is not None:
 
             st.write("### Correlation Interpretation")
 
-            def interpret_correlation(value):
-                absolute_value = abs(value)
-
-                if absolute_value < 0.20:
-                    strength = "very weak"
-                elif absolute_value < 0.40:
-                    strength = "weak"
-                elif absolute_value < 0.60:
-                    strength = "moderate"
-                elif absolute_value < 0.80:
-                    strength = "strong"
-                else:
-                    strength = "very strong"
-
-                if value > 0:
-                    direction = "positive"
-                elif value < 0:
-                    direction = "negative"
-                else:
-                    return "There is no linear correlation."
-
-                return (
-                    f"There is a {strength} {direction} linear "
-                    f"correlation (r = {value:.4f})."
-                )
+            # Use the shared interpretation helper so the automatic and
+            # manual correlation sections follow the same wording and thresholds.
 
             interpretation_rows = []
 
