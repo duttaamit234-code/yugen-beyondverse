@@ -455,211 +455,125 @@ if uploaded_file is not None:
 
         else:
 
-            categorical_group_columns = [
-                column
-                for column in df.columns
-                if not pd.api.types.is_numeric_dtype(df[column])
-                and df[column].nunique(dropna=True) >= 2
-            ]
+            # Automatically detect the dataset structure.
+            # A categorical column is treated as a grouping variable only
+            # when every category has at least two observations.
+            grouping_candidates = []
 
-            test_mode = st.radio(
-                "Data format",
-                [
-                    "Grouping column + numerical variable",
-                    "Two separate numerical columns"
-                ],
-                horizontal=True,
-                key="two_sample_mode"
-            )
+            for column in df.columns:
 
-            if test_mode == "Grouping column + numerical variable":
+                if pd.api.types.is_numeric_dtype(df[column]):
+                    continue
 
-                if not categorical_group_columns:
+                counts = df[column].dropna().value_counts()
 
-                    st.info(
-                        "No categorical grouping column was found. "
-                        "Use 'Two separate numerical columns' for "
-                        "datasets such as Group_A and Group_B."
-                    )
+                if (
+                    len(counts) >= 2
+                    and (counts >= 2).all()
+                ):
+                    grouping_candidates.append(column)
 
+            if grouping_candidates:
+
+                # Prefer a two-level grouping variable when available.
+                two_level_candidates = [
+                    column
+                    for column in grouping_candidates
+                    if df[column].dropna().nunique() == 2
+                ]
+
+                if two_level_candidates:
+                    default_group_column = two_level_candidates[0]
                 else:
+                    default_group_column = grouping_candidates[0]
 
-                    group_column = st.selectbox(
-                        "Select the grouping column",
-                        categorical_group_columns,
-                        key="group_column"
+                st.caption(
+                    f"Detected grouped data using '{default_group_column}' "
+                    "as the grouping structure."
+                )
+
+                group_column = st.selectbox(
+                    "Grouping column",
+                    grouping_candidates,
+                    index=grouping_candidates.index(default_group_column),
+                    key="group_column"
+                )
+
+                group_values = (
+                    df[group_column]
+                    .dropna()
+                    .unique()
+                    .tolist()
+                )
+
+                value_column = st.selectbox(
+                    "Numerical variable",
+                    numeric_columns,
+                    key="two_sample_value"
+                )
+
+                group1 = st.selectbox(
+                    "Group 1",
+                    group_values,
+                    key="group1"
+                )
+
+                remaining_groups = [
+                    value
+                    for value in group_values
+                    if value != group1
+                ]
+
+                group2 = st.selectbox(
+                    "Group 2",
+                    remaining_groups,
+                    key="group2"
+                )
+
+                two_sample_alpha = st.selectbox(
+                    "Significance Level (α)",
+                    [0.01, 0.05, 0.10],
+                    index=1,
+                    key="two_sample_alpha"
+                )
+
+                if st.button(
+                    "Run Two-Sample t-Test",
+                    key="run_two_sample_grouped"
+                ):
+
+                    two_sample_result = two_sample_t_test(
+                        df,
+                        value_column,
+                        group_column,
+                        group1,
+                        group2
                     )
-
-                    group_values = (
-                        df[group_column]
-                        .dropna()
-                        .unique()
-                        .tolist()
-                    )
-
-                    if len(group_values) < 2:
-
-                        st.info(
-                            "The selected grouping column "
-                            "must contain at least two groups."
-                        )
-
-                    else:
-
-                        value_column = st.selectbox(
-                            "Select the numerical variable",
-                            numeric_columns,
-                            key="two_sample_value"
-                        )
-
-                        group1 = st.selectbox(
-                            "Select Group 1",
-                            group_values,
-                            key="group1"
-                        )
-
-                        remaining_groups = [
-                            value
-                            for value in group_values
-                            if value != group1
-                        ]
-
-                        group2 = st.selectbox(
-                            "Select Group 2",
-                            remaining_groups,
-                            key="group2"
-                        )
-
-                        two_sample_alpha = st.selectbox(
-                            "Significance Level (α)",
-                            [0.01, 0.05, 0.10],
-                            index=1,
-                            key="two_sample_alpha"
-                        )
-
-                        if st.button(
-                            "Run Two-Sample t-Test",
-                            key="run_two_sample_grouped"
-                        ):
-
-                            two_sample_result = two_sample_t_test(
-                                df,
-                                value_column,
-                                group_column,
-                                group1,
-                                group2
-                            )
-
-                            if two_sample_result is None:
-
-                                st.error(
-                                    "Each selected group must have "
-                                    "at least two valid numerical observations."
-                                )
-
-                            else:
-                                result_col1, result_col2 = st.columns(2)
-
-                                with result_col1:
-                                    st.metric(
-                                        f"{group1} Mean",
-                                        f"{two_sample_result['Group 1 Mean']:.4f}"
-                                    )
-                                    st.metric(
-                                        f"{group1} Sample Size",
-                                        two_sample_result["Group 1 Size"]
-                                    )
-                                    st.metric(
-                                        "Mean Difference",
-                                        f"{two_sample_result['Mean Difference']:.4f}"
-                                    )
-                                    st.metric(
-                                        "T-Statistic",
-                                        f"{two_sample_result['T-Statistic']:.4f}"
-                                    )
-
-                                with result_col2:
-                                    st.metric(
-                                        f"{group2} Mean",
-                                        f"{two_sample_result['Group 2 Mean']:.4f}"
-                                    )
-                                    st.metric(
-                                        f"{group2} Sample Size",
-                                        two_sample_result["Group 2 Size"]
-                                    )
-                                    st.metric(
-                                        "P-Value",
-                                        f"{two_sample_result['P-Value']:.6f}"
-                                    )
-                                    st.metric(
-                                        "Degrees of Freedom",
-                                        f"{two_sample_result['Degrees of Freedom']:.4f}"
-                                    )
-
-                                t_critical = stats.t.ppf(
-                                    1 - (two_sample_alpha / 2),
-                                    two_sample_result["Degrees of Freedom"]
-                                )
-
-                                t_decision = (
-                                    "Significant"
-                                    if abs(two_sample_result["T-Statistic"]) > t_critical
-                                    else "Not Significant"
-                                )
-
-                                st.write("### t-Test Comparison")
-
-                                t_comparison = pd.DataFrame({
-                                    "t-Calculated": [two_sample_result["T-Statistic"]],
-                                    "t-Tabulated": [t_critical],
-                                    "df": [two_sample_result["Degrees of Freedom"]],
-                                    "α": [two_sample_alpha],
-                                    "Decision": [t_decision],
-                                })
-
-                                st.dataframe(
-                                    t_comparison.style.format({
-                                        "t-Calculated": "{:.4f}",
-                                        "t-Tabulated": "{:.4f}",
-                                        "df": "{:.4f}",
-                                        "α": "{:.2f}",
-                                    }),
-                                    use_container_width=True,
-                                    hide_index=True
-                                )
-
-                                if abs(two_sample_result["T-Statistic"]) > t_critical:
-                                    st.warning(
-                                        f"|t-calculated| ({abs(two_sample_result['T-Statistic']):.4f}) "
-                                        f"> t-tabulated ({t_critical:.4f}). "
-                                        "Reject the null hypothesis."
-                                    )
-                                else:
-                                    st.success(
-                                        f"|t-calculated| ({abs(two_sample_result['T-Statistic']):.4f}) "
-                                        f"≤ t-tabulated ({t_critical:.4f}). "
-                                        "Fail to reject the null hypothesis."
-                                    )
 
             else:
+
+                st.caption(
+                    "Detected two-sample data as separate numerical columns."
+                )
 
                 col1, col2 = st.columns(2)
 
                 with col1:
                     wide_group1 = st.selectbox(
-                        "Select Numerical Group 1",
+                        "Numerical Group 1",
                         numeric_columns,
                         key="wide_group1"
                     )
 
                 remaining_numeric = [
-                    column for column in numeric_columns
+                    column
+                    for column in numeric_columns
                     if column != wide_group1
                 ]
 
                 with col2:
                     wide_group2 = st.selectbox(
-                        "Select Numerical Group 2",
+                        "Numerical Group 2",
                         remaining_numeric,
                         key="wide_group2"
                     )
@@ -682,96 +596,97 @@ if uploaded_file is not None:
                         wide_group2
                     )
 
-                    if two_sample_result is None:
+            if "two_sample_result" in locals() and two_sample_result is not None:
 
-                        st.error(
-                            "Each numerical column must contain "
-                            "at least two valid observations."
-                        )
+                result_col1, result_col2 = st.columns(2)
 
-                    else:
-                        result_col1, result_col2 = st.columns(2)
+                with result_col1:
+                    st.metric(
+                        "Group 1 Mean",
+                        f"{two_sample_result['Group 1 Mean']:.4f}"
+                    )
+                    st.metric(
+                        "Group 1 Sample Size",
+                        two_sample_result["Group 1 Size"]
+                    )
+                    st.metric(
+                        "Mean Difference",
+                        f"{two_sample_result['Mean Difference']:.4f}"
+                    )
+                    st.metric(
+                        "T-Statistic",
+                        f"{two_sample_result['T-Statistic']:.4f}"
+                    )
 
-                        with result_col1:
-                            st.metric(
-                                f"{wide_group1} Mean",
-                                f"{two_sample_result['Group 1 Mean']:.4f}"
-                            )
-                            st.metric(
-                                f"{wide_group1} Sample Size",
-                                two_sample_result["Group 1 Size"]
-                            )
-                            st.metric(
-                                "Mean Difference",
-                                f"{two_sample_result['Mean Difference']:.4f}"
-                            )
-                            st.metric(
-                                "T-Statistic",
-                                f"{two_sample_result['T-Statistic']:.4f}"
-                            )
+                with result_col2:
+                    st.metric(
+                        "Group 2 Mean",
+                        f"{two_sample_result['Group 2 Mean']:.4f}"
+                    )
+                    st.metric(
+                        "Group 2 Sample Size",
+                        two_sample_result["Group 2 Size"]
+                    )
+                    st.metric(
+                        "P-Value",
+                        f"{two_sample_result['P-Value']:.6f}"
+                    )
+                    st.metric(
+                        "Degrees of Freedom",
+                        f"{two_sample_result['Degrees of Freedom']:.4f}"
+                    )
 
-                        with result_col2:
-                            st.metric(
-                                f"{wide_group2} Mean",
-                                f"{two_sample_result['Group 2 Mean']:.4f}"
-                            )
-                            st.metric(
-                                f"{wide_group2} Sample Size",
-                                two_sample_result["Group 2 Size"]
-                            )
-                            st.metric(
-                                "P-Value",
-                                f"{two_sample_result['P-Value']:.6f}"
-                            )
-                            st.metric(
-                                "Degrees of Freedom",
-                                f"{two_sample_result['Degrees of Freedom']:.4f}"
-                            )
+                t_critical = stats.t.ppf(
+                    1 - (two_sample_alpha / 2),
+                    two_sample_result["Degrees of Freedom"]
+                )
 
-                        t_critical = stats.t.ppf(
-                            1 - (two_sample_alpha / 2),
-                            two_sample_result["Degrees of Freedom"]
-                        )
+                t_decision = (
+                    "Significant"
+                    if abs(two_sample_result["T-Statistic"]) > t_critical
+                    else "Not Significant"
+                )
 
-                        t_decision = (
-                            "Significant"
-                            if abs(two_sample_result["T-Statistic"]) > t_critical
-                            else "Not Significant"
-                        )
+                st.write("### t-Test Comparison")
 
-                        st.write("### t-Test Comparison")
+                t_comparison = pd.DataFrame({
+                    "t-Calculated": [two_sample_result["T-Statistic"]],
+                    "t-Tabulated": [t_critical],
+                    "df": [two_sample_result["Degrees of Freedom"]],
+                    "α": [two_sample_alpha],
+                    "Decision": [t_decision],
+                })
 
-                        t_comparison = pd.DataFrame({
-                            "t-Calculated": [two_sample_result["T-Statistic"]],
-                            "t-Tabulated": [t_critical],
-                            "df": [two_sample_result["Degrees of Freedom"]],
-                            "α": [two_sample_alpha],
-                            "Decision": [t_decision],
-                        })
+                st.dataframe(
+                    t_comparison.style.format({
+                        "t-Calculated": "{:.4f}",
+                        "t-Tabulated": "{:.4f}",
+                        "df": "{:.4f}",
+                        "α": "{:.2f}",
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
 
-                        st.dataframe(
-                            t_comparison.style.format({
-                                "t-Calculated": "{:.4f}",
-                                "t-Tabulated": "{:.4f}",
-                                "df": "{:.4f}",
-                                "α": "{:.2f}",
-                            }),
-                            use_container_width=True,
-                            hide_index=True
-                        )
+                if abs(two_sample_result["T-Statistic"]) > t_critical:
+                    st.warning(
+                        f"|t-calculated| ({abs(two_sample_result['T-Statistic']):.4f}) "
+                        f"> t-tabulated ({t_critical:.4f}). "
+                        "Reject the null hypothesis."
+                    )
+                else:
+                    st.success(
+                        f"|t-calculated| ({abs(two_sample_result['T-Statistic']):.4f}) "
+                        f"≤ t-tabulated ({t_critical:.4f}). "
+                        "Fail to reject the null hypothesis."
+                    )
 
-                        if abs(two_sample_result["T-Statistic"]) > t_critical:
-                            st.warning(
-                                f"|t-calculated| ({abs(two_sample_result['T-Statistic']):.4f}) "
-                                f"> t-tabulated ({t_critical:.4f}). "
-                                "Reject the null hypothesis."
-                            )
-                        else:
-                            st.success(
-                                f"|t-calculated| ({abs(two_sample_result['T-Statistic']):.4f}) "
-                                f"≤ t-tabulated ({t_critical:.4f}). "
-                                "Fail to reject the null hypothesis."
-                            )
+            elif "two_sample_result" in locals():
+
+                st.error(
+                    "Each selected group must have at least two "
+                    "valid numerical observations."
+                )
 
 
         st.subheader("One-Way ANOVA")
