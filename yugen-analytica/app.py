@@ -44,6 +44,14 @@ from src.visualization import (
     create_correlation_heatmap,
 )
 
+from src.decision_engine import (
+    recommend_analyses,
+    summarize_recommendations,
+    decision_from_result,
+    interpret_correlation,
+    interpret_effect_size,
+)
+
 
 st.set_page_config(
     page_title="StatsYuri",
@@ -215,6 +223,314 @@ if uploaded_file is not None:
 
         numeric_columns = get_numeric_columns(df)
 
+
+        st.subheader("Automatic Analysis")
+
+        st.write(
+            "StatsYuri detects common data structures and suggests analyses "
+            "without requiring you to manually choose a test. "
+            "Recommendations describe statistical structure, not the "
+            "research question or study design."
+        )
+
+        automatic_alpha = st.selectbox(
+            "Automatic Analysis Significance Level (α)",
+            [0.01, 0.05, 0.10],
+            index=1,
+            key="automatic_analysis_alpha"
+        )
+
+        recommendations = recommend_analyses(df)
+        recommendation_table = summarize_recommendations(recommendations)
+
+        if recommendation_table.empty:
+            st.info(
+                "No common analysis structure could be identified from the "
+                "current dataset."
+            )
+        else:
+            st.write("### Detected Structures and Suggested Analyses")
+            st.dataframe(
+                recommendation_table,
+                use_container_width=True,
+                hide_index=True
+            )
+
+            st.write("### Automatic Results")
+
+            for index, recommendation in enumerate(recommendations[:6]):
+                analysis_name = recommendation["Analysis"]
+                variable_text = ", ".join(
+                    str(recommendation[key])
+                    for key in (
+                        "Response",
+                        "Grouping",
+                        "Variable 1",
+                        "Variable 2",
+                    )
+                    if key in recommendation
+                )
+
+                with st.expander(
+                    f"{analysis_name}: {variable_text}",
+                    expanded=index == 0
+                ):
+                    result = None
+
+                    if analysis_name == "Welch two-sample t-test":
+                        group_column = recommendation["Grouping"]
+                        response_column = recommendation["Response"]
+                        groups = (
+                            df[group_column]
+                            .dropna()
+                            .unique()
+                            .tolist()
+                        )
+
+                        if len(groups) == 2:
+                            result = two_sample_t_test(
+                                df,
+                                response_column,
+                                group_column,
+                                groups[0],
+                                groups[1]
+                            )
+
+                            if result is not None:
+                                decision = decision_from_result(
+                                    result["P-Value"],
+                                    automatic_alpha,
+                                    "Welch two-sample t-test"
+                                )
+
+                                table = pd.DataFrame({
+                                    "Statistic": [
+                                        "Group 1 Mean",
+                                        "Group 2 Mean",
+                                        "Mean Difference",
+                                        "t-Statistic",
+                                        "Degrees of Freedom",
+                                        "p-value",
+                                        "Decision",
+                                    ],
+                                    "Value": [
+                                        result["Group 1 Mean"],
+                                        result["Group 2 Mean"],
+                                        result["Mean Difference"],
+                                        result["T-Statistic"],
+                                        result["Degrees of Freedom"],
+                                        result["P-Value"],
+                                        decision["Decision"],
+                                    ],
+                                })
+
+                                st.dataframe(
+                                    table,
+                                    use_container_width=True,
+                                    hide_index=True
+                                )
+                                st.write(
+                                    f"**Compare:** {decision['Comparison']}"
+                                )
+                                st.write(
+                                    f"**Interpret:** {decision['Interpretation']}"
+                                )
+
+                                effect = cohens_d_independent(
+                                    pd.DataFrame({
+                                        "Group 1": df.loc[
+                                            df[group_column] == groups[0],
+                                            response_column
+                                        ],
+                                        "Group 2": df.loc[
+                                            df[group_column] == groups[1],
+                                            response_column
+                                        ]
+                                    }),
+                                    "Group 1",
+                                    "Group 2"
+                                )
+                                if effect is not None:
+                                    st.caption(
+                                        interpret_effect_size(
+                                            "Cohen's d",
+                                            effect["Cohen's d"]
+                                        )
+                                    )
+
+                    elif analysis_name == "One-way ANOVA":
+                        result = one_way_anova(
+                            df,
+                            recommendation["Response"],
+                            recommendation["Grouping"]
+                        )
+
+                        if result is not None:
+                            decision = decision_from_result(
+                                result["P-Value"],
+                                automatic_alpha,
+                                "One-way ANOVA"
+                            )
+
+                            eta_squared = one_way_eta_squared(result)
+
+                            table = pd.DataFrame({
+                                "Statistic": [
+                                    "F-Statistic",
+                                    "Between-Group DF",
+                                    "Within-Group DF",
+                                    "p-value",
+                                    "Decision",
+                                ],
+                                "Value": [
+                                    result["F-Statistic"],
+                                    result["Between-Group DF"],
+                                    result["Within-Group DF"],
+                                    result["P-Value"],
+                                    decision["Decision"],
+                                ],
+                            })
+
+                            st.dataframe(
+                                table,
+                                use_container_width=True,
+                                hide_index=True
+                            )
+                            st.write(
+                                f"**Compare:** {decision['Comparison']}"
+                            )
+                            st.write(
+                                f"**Interpret:** {decision['Interpretation']}"
+                            )
+
+                            if eta_squared is not None:
+                                st.caption(
+                                    interpret_effect_size(
+                                        "Eta squared",
+                                        eta_squared
+                                    )
+                                )
+
+                    elif analysis_name == (
+                        "Pearson correlation + simple linear regression"
+                    ):
+                        variable_1 = recommendation["Variable 1"]
+                        variable_2 = recommendation["Variable 2"]
+                        correlation_matrix = calculate_correlation(df)
+                        r_value = correlation_matrix.loc[
+                            variable_1,
+                            variable_2
+                        ]
+
+                        regression_result = simple_linear_regression(
+                            df,
+                            variable_1,
+                            variable_2
+                        )
+
+                        st.write(
+                            f"**Correlation:** {interpret_correlation(r_value)}"
+                        )
+
+                        if regression_result is not None:
+                            decision = decision_from_result(
+                                regression_result["Slope P-Value"],
+                                automatic_alpha,
+                                "Simple linear regression"
+                            )
+
+                            table = pd.DataFrame({
+                                "Statistic": [
+                                    "Pearson r",
+                                    "R²",
+                                    "Slope",
+                                    "Slope p-value",
+                                    "Decision",
+                                ],
+                                "Value": [
+                                    r_value,
+                                    regression_result["R-Squared"],
+                                    regression_result["Slope"],
+                                    regression_result["Slope P-Value"],
+                                    decision["Decision"],
+                                ],
+                            })
+
+                            st.dataframe(
+                                table,
+                                use_container_width=True,
+                                hide_index=True
+                            )
+                            st.write(
+                                f"**Compare:** {decision['Comparison']}"
+                            )
+                            st.write(
+                                f"**Interpret:** {decision['Interpretation']}"
+                            )
+
+                    elif analysis_name == "Chi-square test of independence":
+                        result = chi_square_independence(
+                            df,
+                            recommendation["Variable 1"],
+                            recommendation["Variable 2"]
+                        )
+
+                        if result is not None:
+                            decision = decision_from_result(
+                                result["P-Value"],
+                                automatic_alpha,
+                                "Chi-square test of independence"
+                            )
+
+                            table = pd.DataFrame({
+                                "Statistic": [
+                                    "Chi-square",
+                                    "Degrees of Freedom",
+                                    "Observations",
+                                    "p-value",
+                                    "Decision",
+                                ],
+                                "Value": [
+                                    result["Chi-Square"],
+                                    result["Degrees of Freedom"],
+                                    result["Observations"],
+                                    result["P-Value"],
+                                    decision["Decision"],
+                                ],
+                            })
+
+                            st.dataframe(
+                                table,
+                                use_container_width=True,
+                                hide_index=True
+                            )
+                            st.write(
+                                f"**Compare:** {decision['Comparison']}"
+                            )
+                            st.write(
+                                f"**Interpret:** {decision['Interpretation']}"
+                            )
+
+                            cramers = cramers_v(
+                                df,
+                                recommendation["Variable 1"],
+                                recommendation["Variable 2"]
+                            )
+                            if cramers is not None:
+                                st.caption(
+                                    interpret_effect_size(
+                                        "Cramer's V",
+                                        cramers
+                                    )
+                                )
+
+                    if result is None and analysis_name not in {
+                        "Pearson correlation + simple linear regression"
+                    }:
+                        st.info(
+                            "The detected structure did not contain enough "
+                            "valid observations to calculate this result."
+                        )
 
 
         st.subheader("Assumption Checking")
