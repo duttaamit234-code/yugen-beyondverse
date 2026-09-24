@@ -62,7 +62,8 @@ def get_numeric_statistics(df):
 def detect_outliers(df):
     """Detect potential outliers using the 1.5 × IQR rule."""
 
-    numeric_df = df.select_dtypes(include="number")
+    numeric_columns = _analysis_numeric_columns(df)
+    numeric_df = df[numeric_columns]
 
     if numeric_df.empty:
         return pd.DataFrame()
