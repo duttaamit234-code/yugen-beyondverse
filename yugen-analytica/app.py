@@ -3,6 +3,7 @@ import streamlit as st
 
 # StatsYuri web build: keep the statistical modules synchronized with this app.
 # Assumption diagnostics: Shapiro-Wilk and Levene tests are provided by src.statistics.
+# Deployment sync: statistical feature modules are synchronized before app startup.
 from scipy import stats
 
 from src.data_loader import (
