@@ -461,3 +461,37 @@ def calculate_confidence_intervals(df, alpha=0.05):
         })
 
     return pd.DataFrame(results)
+
+def simple_linear_regression(df, x_column, y_column):
+    """Perform simple linear regression between two numerical variables."""
+
+    data = df[[x_column, y_column]].apply(
+        pd.to_numeric,
+        errors="coerce"
+    ).dropna()
+
+    if len(data) < 3 or data[x_column].nunique() < 2:
+        return None
+
+    result = stats.linregress(
+        data[x_column],
+        data[y_column]
+    )
+
+    r_squared = result.rvalue ** 2
+
+    return {
+        "X Variable": x_column,
+        "Y Variable": y_column,
+        "Observations": len(data),
+        "Slope": result.slope,
+        "Intercept": result.intercept,
+        "R": result.rvalue,
+        "R-Squared": r_squared,
+        "Standard Error": result.stderr,
+        "Slope P-Value": result.pvalue,
+        "Equation": (
+            f"Y = {result.intercept:.4f} "
+            f"+ ({result.slope:.4f})X"
+        ),
+    }
