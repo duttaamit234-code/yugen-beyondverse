@@ -363,3 +363,54 @@ def two_sample_t_test(
         "P-Value": p_value,
         "Degrees of Freedom": degrees_of_freedom,
         }
+
+def two_sample_t_test_wide(df, value_column_1, value_column_2):
+    """Perform Welch's two-sample t-test on two separate numerical columns."""
+
+    group1 = pd.to_numeric(df[value_column_1], errors="coerce").dropna()
+    group2 = pd.to_numeric(df[value_column_2], errors="coerce").dropna()
+
+    if len(group1) < 2 or len(group2) < 2:
+        return None
+
+    t_statistic, p_value = stats.ttest_ind(
+        group1,
+        group2,
+        equal_var=False
+    )
+
+    mean_difference = group1.mean() - group2.mean()
+
+    variance_1 = group1.var(ddof=1)
+    variance_2 = group2.var(ddof=1)
+
+    standard_error = (
+        (variance_1 / len(group1)) +
+        (variance_2 / len(group2))
+    ) ** 0.5
+
+    if standard_error == 0:
+        degrees_of_freedom = float("inf")
+    else:
+        numerator = (
+            (variance_1 / len(group1)) +
+            (variance_2 / len(group2))
+        ) ** 2
+
+        denominator = (
+            ((variance_1 / len(group1)) ** 2) / (len(group1) - 1)
+            + ((variance_2 / len(group2)) ** 2) / (len(group2) - 1)
+        )
+
+        degrees_of_freedom = numerator / denominator
+
+    return {
+        "Group 1 Mean": group1.mean(),
+        "Group 2 Mean": group2.mean(),
+        "Group 1 Size": len(group1),
+        "Group 2 Size": len(group2),
+        "Mean Difference": mean_difference,
+        "T-Statistic": t_statistic,
+        "P-Value": p_value,
+        "Degrees of Freedom": degrees_of_freedom,
+    }
