@@ -213,50 +213,6 @@ if uploaded_file is not None:
             )
 
 
-        st.subheader("Analysis Report")
-
-        report_lines = [
-            "StatsYuri Analysis Report",
-            "=========================",
-            "",
-            f"Rows: {summary['rows']}",
-            f"Columns: {summary['columns']}",
-            f"Missing values: {summary['missing_values']}",
-            "",
-            "Descriptive Statistics",
-            "----------------------",
-        ]
-
-        report_lines.append(
-            statistics.to_string(index=False)
-            if not statistics.empty
-            else "No numerical variables available."
-        )
-
-        report_lines.extend([
-            "",
-            "Outlier Summary",
-            "---------------",
-            outlier_results.to_string(index=False)
-            if not outlier_results.empty
-            else "No numerical variables available.",
-            "",
-            "Notes",
-            "-----",
-            "Interpret statistical results together with study design, "
-            "assumptions, effect sizes, and practical context.",
-        ])
-
-        analysis_report = "\n".join(report_lines)
-
-        st.download_button(
-            "Download Analysis Report",
-            data=analysis_report.encode("utf-8"),
-            file_name="statsyuri_analysis_report.txt",
-            mime="text/plain"
-        )
-
-
         numeric_columns = get_numeric_columns(df)
 
 
@@ -543,6 +499,50 @@ if uploaded_file is not None:
                     f"{total_outliers} potential outlier(s) "
                     "were detected using the 1.5 × IQR rule."
                 )
+
+
+        st.subheader("Analysis Report")
+
+        report_lines = [
+            "StatsYuri Analysis Report",
+            "=========================",
+            "",
+            f"Rows: {summary['rows']}",
+            f"Columns: {summary['columns']}",
+            f"Missing values: {summary['missing_values']}",
+            "",
+            "Descriptive Statistics",
+            "----------------------",
+        ]
+
+        report_lines.append(
+            statistics.to_string(index=False)
+            if not statistics.empty
+            else "No numerical variables available."
+        )
+
+        report_lines.extend([
+            "",
+            "Outlier Summary",
+            "---------------",
+            outlier_results.to_string(index=False)
+            if not outlier_results.empty
+            else "No numerical variables available.",
+            "",
+            "Notes",
+            "-----",
+            "Interpret statistical results together with study design, "
+            "assumptions, effect sizes, and practical context.",
+        ])
+
+        analysis_report = "\n".join(report_lines)
+
+        st.download_button(
+            "Download Analysis Report",
+            data=analysis_report.encode("utf-8"),
+            file_name="statsyuri_analysis_report.txt",
+            mime="text/plain"
+        )
 
 
         st.subheader("Data Visualization")
