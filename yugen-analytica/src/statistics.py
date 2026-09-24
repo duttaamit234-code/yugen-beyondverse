@@ -104,9 +104,10 @@ def detect_outliers(df):
 
 
 def calculate_correlation(df):
-    """Calculate the Pearson correlation matrix for numeric columns."""
+    """Calculate the Pearson correlation matrix for analysis-ready numeric columns."""
 
-    numeric_df = df.select_dtypes(include="number")
+    numeric_columns = _analysis_numeric_columns(df)
+    numeric_df = df[numeric_columns]
 
     if numeric_df.shape[1] < 2:
         return pd.DataFrame()
