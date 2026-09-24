@@ -495,3 +495,63 @@ def simple_linear_regression(df, x_column, y_column):
             f"+ ({result.slope:.4f})X"
         ),
     }
+
+def wilcoxon_signed_rank_test(df, column, hypothesized_median=0.0):
+    """Perform a two-sided one-sample Wilcoxon signed-rank test."""
+
+    data = pd.to_numeric(
+        df[column],
+        errors="coerce"
+    ).dropna()
+
+    differences = data - hypothesized_median
+    differences = differences[differences != 0]
+
+    if len(differences) < 2:
+        return None
+
+    result = stats.wilcoxon(
+        differences,
+        alternative="two-sided",
+        method="auto"
+    )
+
+    return {
+        "Sample Size": len(differences),
+        "Sample Median": data.median(),
+        "Hypothesized Median": hypothesized_median,
+        "W-Statistic": result.statistic,
+        "P-Value": result.pvalue,
+    }
+
+
+def mann_whitney_u_test(df, column_1, column_2):
+    """Perform a two-sided Mann-Whitney U test on two numerical columns."""
+
+    group1 = pd.to_numeric(
+        df[column_1],
+        errors="coerce"
+    ).dropna()
+
+    group2 = pd.to_numeric(
+        df[column_2],
+        errors="coerce"
+    ).dropna()
+
+    if len(group1) < 2 or len(group2) < 2:
+        return None
+
+    result = stats.mannwhitneyu(
+        group1,
+        group2,
+        alternative="two-sided"
+    )
+
+    return {
+        "Group 1 Size": len(group1),
+        "Group 2 Size": len(group2),
+        "Group 1 Median": group1.median(),
+        "Group 2 Median": group2.median(),
+        "U-Statistic": result.statistic,
+        "P-Value": result.pvalue,
+    }
