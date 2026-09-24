@@ -30,6 +30,13 @@ For numerical variables, StatsYuri calculates:
 ### Outlier Detection
 Potential outliers are detected using the 1.5 × IQR rule.
 
+### Automatic Analysis
+- Detects common numerical and categorical data structures
+- Suggests Welch two-sample t-tests, one-way ANOVA, Pearson correlation, simple regression, and chi-square independence tests where the data structure supports them
+- Ignores common identifier columns such as ID, index, serial, and code fields
+- Provides automatic result calculation and a consistent calculate → compare → decide → interpret workflow
+- Reports relevant effect-size summaries where available
+
 ### Data Visualization
 - Histograms
 - Box plots
@@ -121,6 +128,6 @@ A p-value is interpreted relative to the selected significance level (α). A sma
 
 ## Version
 
-StatsYuri v1.2
+StatsYuri v1.3
 
 The current version represents the completed initial statistical-analysis scope of the project.
