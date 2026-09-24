@@ -13,6 +13,7 @@ from src.statistics import (
     one_sample_t_test,
     two_sample_t_test,
     one_way_anova,
+    two_way_anova,
 )
 
 from src.visualization import (
@@ -710,6 +711,136 @@ if uploaded_file is not None:
                             "A significant result indicates that at least "
                             "one mean differs, but does not identify which "
                             "groups differ."
+                        )
+
+
+        st.subheader("Two-Way ANOVA")
+
+        st.write(
+            "Analyze the effects of two categorical factors on a "
+            "numerical response, including their interaction."
+        )
+
+        if len(numeric_columns) == 0:
+
+            st.info(
+                "A numerical response column is required for two-way ANOVA."
+            )
+
+        else:
+
+            factor_columns = [
+                column
+                for column in df.columns
+                if df[column].nunique(dropna=True) >= 2
+                and column not in numeric_columns
+            ]
+
+            if len(factor_columns) < 2:
+
+                st.info(
+                    "At least two categorical grouping columns with "
+                    "two or more levels each are required."
+                )
+
+            else:
+
+                two_way_factor1 = st.selectbox(
+                    "Select Factor 1",
+                    factor_columns,
+                    key="two_way_factor1"
+                )
+
+                remaining_factor_columns = [
+                    column
+                    for column in factor_columns
+                    if column != two_way_factor1
+                ]
+
+                two_way_factor2 = st.selectbox(
+                    "Select Factor 2",
+                    remaining_factor_columns,
+                    key="two_way_factor2"
+                )
+
+                two_way_value = st.selectbox(
+                    "Select the numerical response",
+                    numeric_columns,
+                    key="two_way_value"
+                )
+
+                two_way_alpha = st.selectbox(
+                    "Two-Way ANOVA Significance Level (α)",
+                    [0.01, 0.05, 0.10],
+                    index=1,
+                    key="two_way_alpha"
+                )
+
+                if st.button("Run Two-Way ANOVA"):
+
+                    two_way_result = two_way_anova(
+                        df,
+                        two_way_value,
+                        two_way_factor1,
+                        two_way_factor2
+                    )
+
+                    if two_way_result is None:
+
+                        st.error(
+                            "The selected data could not be used for "
+                            "two-way ANOVA. Check that both factors have "
+                            "at least two levels and that valid numerical "
+                            "observations are available."
+                        )
+
+                    else:
+
+                        st.write("### Two-Way ANOVA Table")
+
+                        anova_table = two_way_result["ANOVA Table"].copy()
+
+                        st.dataframe(
+                            anova_table,
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                        st.metric(
+                            "Observations Used",
+                            two_way_result["Observations"]
+                        )
+
+                        st.write(
+                            "The table reports the effects of each factor "
+                            "and their interaction."
+                        )
+
+                        for _, row in anova_table.iterrows():
+
+                            source = row["Source"]
+                            p_value = row["P-Value"]
+
+                            if pd.isna(p_value):
+                                continue
+
+                            if p_value < two_way_alpha:
+                                st.warning(
+                                    f"{source}: significant at "
+                                    f"α = {two_way_alpha} "
+                                    f"(p = {p_value:.6f})."
+                                )
+                            else:
+                                st.success(
+                                    f"{source}: not significant at "
+                                    f"α = {two_way_alpha} "
+                                    f"(p = {p_value:.6f})."
+                                )
+
+                        st.caption(
+                            "The interaction term tests whether the effect "
+                            "of one factor depends on the level of the "
+                            "other factor."
                         )
 
 
