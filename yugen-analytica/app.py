@@ -735,6 +735,72 @@ if uploaded_file is not None:
             )
 
 
+            st.write("### Correlation Interpretation")
+
+            def interpret_correlation(value):
+                absolute_value = abs(value)
+
+                if absolute_value < 0.20:
+                    strength = "very weak"
+                elif absolute_value < 0.40:
+                    strength = "weak"
+                elif absolute_value < 0.60:
+                    strength = "moderate"
+                elif absolute_value < 0.80:
+                    strength = "strong"
+                else:
+                    strength = "very strong"
+
+                if value > 0:
+                    direction = "positive"
+                elif value < 0:
+                    direction = "negative"
+                else:
+                    return "There is no linear correlation."
+
+                return (
+                    f"There is a {strength} {direction} linear "
+                    f"correlation (r = {value:.4f})."
+                )
+
+            interpretation_rows = []
+
+            for column_index, column in enumerate(correlation_matrix.columns):
+
+                for other_column in correlation_matrix.columns[column_index + 1:]:
+
+                    value = correlation_matrix.loc[
+                        column,
+                        other_column
+                    ]
+
+                    interpretation_rows.append({
+                        "Variables": f"{column} ↔ {other_column}",
+                        "Pearson r": value,
+                        "Interpretation": interpret_correlation(value),
+                    })
+
+            if interpretation_rows:
+
+                interpretation_table = pd.DataFrame(
+                    interpretation_rows
+                )
+
+                st.dataframe(
+                    interpretation_table.style.format({
+                        "Pearson r": "{:.4f}"
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+            st.caption(
+                "Interpretation describes the strength and direction "
+                "of linear association. Correlation does not establish "
+                "causation."
+            )
+
+
             st.write("### Correlation Heatmap")
 
 
