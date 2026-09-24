@@ -5,6 +5,15 @@ from itertools import combinations
 import pandas as pd
 
 
+def format_p_value(p_value):
+    """Format very small p-values without displaying misleading zeroes."""
+    if p_value is None or pd.isna(p_value):
+        return "Unavailable"
+    if p_value < 0.000001:
+        return "<0.000001"
+    return f"{p_value:.6f}"
+
+
 def compare_p_value(p_value, alpha=0.05):
     """Compare a p-value with alpha and return a consistent decision."""
     if p_value is None or pd.isna(p_value):
@@ -17,7 +26,7 @@ def compare_p_value(p_value, alpha=0.05):
     if p_value < alpha:
         return {
             "Decision": "Reject H₀",
-            "Comparison": f"p = {p_value:.6g} < α = {alpha:.2f}",
+            "Comparison": f"p = {format_p_value(p_value)} < α = {alpha:.2f}",
             "Interpretation": (
                 "The result provides statistical evidence against the null "
                 "hypothesis at the selected significance level."
@@ -26,7 +35,7 @@ def compare_p_value(p_value, alpha=0.05):
 
     return {
         "Decision": "Fail to reject H₀",
-        "Comparison": f"p = {p_value:.6g} ≥ α = {alpha:.2f}",
+        "Comparison": f"p = {format_p_value(p_value)} ≥ α = {alpha:.2f}",
         "Interpretation": (
             "The result does not provide sufficient statistical evidence "
             "against the null hypothesis at the selected significance level."
