@@ -13,6 +13,7 @@ from src.data_loader import (
 from src.statistics import (
     get_numeric_statistics,
     calculate_confidence_intervals,
+    simple_linear_regression,
     detect_outliers,
     calculate_correlation,
     one_sample_t_test,
@@ -287,6 +288,179 @@ if uploaded_file is not None:
                 box_plot,
                 use_container_width=True
             )
+
+
+        st.subheader("Regression Analysis")
+
+        st.write(
+            "Perform simple linear regression between two numerical "
+            "variables."
+        )
+
+        if len(numeric_columns) < 2:
+
+            st.info(
+                "At least two numerical columns are required "
+                "for regression analysis."
+            )
+
+        else:
+
+            regression_x = st.selectbox(
+                "Select predictor variable (X)",
+                numeric_columns,
+                key="regression_x"
+            )
+
+            regression_y_options = [
+                column
+                for column in numeric_columns
+                if column != regression_x
+            ]
+
+            regression_y = st.selectbox(
+                "Select response variable (Y)",
+                regression_y_options,
+                key="regression_y"
+            )
+
+            regression_alpha = st.selectbox(
+                "Regression Significance Level (α)",
+                [0.01, 0.05, 0.10],
+                index=1,
+                key="regression_alpha"
+            )
+
+            if st.button("Run Linear Regression"):
+
+                regression_result = simple_linear_regression(
+                    df,
+                    regression_x,
+                    regression_y
+                )
+
+                if regression_result is None:
+
+                    st.error(
+                        "At least three valid observations and "
+                        "variation in the predictor variable are required."
+                    )
+
+                else:
+
+                    st.write("### Regression Equation")
+
+                    st.code(
+                        regression_result["Equation"]
+                    )
+
+                    result_col1, result_col2 = st.columns(2)
+
+                    with result_col1:
+
+                        st.metric(
+                            "Slope",
+                            f"{regression_result['Slope']:.4f}"
+                        )
+
+                        st.metric(
+                            "Intercept",
+                            f"{regression_result['Intercept']:.4f}"
+                        )
+
+                        st.metric(
+                            "R",
+                            f"{regression_result['R']:.4f}"
+                        )
+
+                        st.metric(
+                            "R²",
+                            f"{regression_result['R-Squared']:.4f}"
+                        )
+
+                    with result_col2:
+
+                        st.metric(
+                            "Slope P-Value",
+                            f"{regression_result['Slope P-Value']:.6f}"
+                        )
+
+                        st.metric(
+                            "Standard Error",
+                            f"{regression_result['Standard Error']:.4f}"
+                        )
+
+                        st.metric(
+                            "Observations",
+                            regression_result["Observations"]
+                        )
+
+                    regression_result_table = pd.DataFrame({
+                        "Statistic": [
+                            "Slope",
+                            "Intercept",
+                            "R",
+                            "R²",
+                            "Standard Error",
+                            "Slope p-value",
+                        ],
+                        "Value": [
+                            regression_result["Slope"],
+                            regression_result["Intercept"],
+                            regression_result["R"],
+                            regression_result["R-Squared"],
+                            regression_result["Standard Error"],
+                            regression_result["Slope P-Value"],
+                        ],
+                    })
+
+                    st.dataframe(
+                        regression_result_table.style.format({
+                            "Value": "{:.6f}"
+                        }),
+                        use_container_width=True,
+                        hide_index=True
+                    )
+
+                    if regression_result["Slope P-Value"] < regression_alpha:
+
+                        st.warning(
+                            f"The slope is statistically significant at "
+                            f"α = {regression_alpha:.2f} "
+                            f"(p = {regression_result['Slope P-Value']:.6f})."
+                        )
+
+                        st.write(
+                            "### Interpretation"
+                        )
+
+                        st.write(
+                            f"For each one-unit increase in "
+                            f"{regression_x}, the predicted value of "
+                            f"{regression_y} changes by approximately "
+                            f"{regression_result['Slope']:.4f} units. "
+                            "The slope is statistically significant, "
+                            "indicating evidence of a linear association "
+                            "between the two variables."
+                        )
+
+                    else:
+
+                        st.success(
+                            f"The slope is not statistically significant "
+                            f"at α = {regression_alpha:.2f} "
+                            f"(p = {regression_result['Slope P-Value']:.6f})."
+                        )
+
+                        st.write(
+                            "### Interpretation"
+                        )
+
+                        st.write(
+                            "There is insufficient statistical evidence "
+                            "of a linear association between the selected "
+                            "variables at the chosen significance level."
+                        )
 
 
         st.subheader("Correlation Analysis")
