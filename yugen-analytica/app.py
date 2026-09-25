@@ -297,9 +297,9 @@ if uploaded_file is not None or text_dataset is not None:
                 else:
                     st.stop()
 
-                else:
-                    df = load_dataset(uploaded_file)
-                    st.success("Dataset uploaded successfully.")
+            else:
+                df = load_dataset(uploaded_file)
+                st.success("Dataset uploaded successfully.")
 
 
         st.subheader("Dataset Preview")
