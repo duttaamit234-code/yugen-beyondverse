@@ -743,12 +743,208 @@ if uploaded_file is not None:
                     use_container_width=True,
                     hide_index=True,
                 )
+
                 if status == "ready":
                     st.caption(
-                        "The question engine only interprets the question here. "
-                        "The existing statistical engine remains responsible for "
-                        "validation, assumptions, calculation, and final decisions."
+                        "The question engine identifies the analysis. "
+                        "StatsYuri then validates the data, calculates the test, "
+                        "compares the result with α, makes the statistical decision, "
+                        "and explains the result."
                     )
+
+                    candidate = question_result["candidates"][0]
+
+                    if st.button(
+                        "Answer Research Question",
+                        key="answer_research_question",
+                        type="primary",
+                    ):
+                        analysis_name = candidate["analysis"]
+                        result = None
+                        test_name = analysis_name
+
+                        if analysis_name == "Welch two-sample t-test":
+                            groups = (
+                                df[candidate["grouping"]]
+                                .dropna()
+                                .unique()
+                                .tolist()
+                            )
+                            if len(groups) == 2:
+                                result = two_sample_t_test(
+                                    df,
+                                    candidate["response"],
+                                    candidate["grouping"],
+                                    groups[0],
+                                    groups[1],
+                                )
+                                test_name = "Welch two-sample t-test"
+
+                        elif analysis_name == "One-way ANOVA":
+                            result = one_way_anova(
+                                df,
+                                candidate["response"],
+                                candidate["grouping"],
+                            )
+                            test_name = "One-way ANOVA"
+
+                        elif analysis_name == "Chi-square test of independence":
+                            result = chi_square_independence(
+                                df,
+                                candidate["variable_1"],
+                                candidate["variable_2"],
+                            )
+                            test_name = "Chi-square test of independence"
+
+                        elif analysis_name == "Pearson correlation + simple linear regression":
+                            x = candidate["variable_1"]
+                            y = candidate["variable_2"]
+                            pair = df[[x, y]].apply(
+                                pd.to_numeric,
+                                errors="coerce",
+                            ).dropna()
+
+                            if len(pair) >= 3 and pair[x].nunique() > 1 and pair[y].nunique() > 1:
+                                correlation, correlation_p = stats.pearsonr(
+                                    pair[x],
+                                    pair[y],
+                                )
+                                regression = simple_linear_regression(df, x, y)
+                                result = {
+                                    "Variable 1": x,
+                                    "Variable 2": y,
+                                    "Observations": len(pair),
+                                    "Pearson r": correlation,
+                                    "P-Value": correlation_p,
+                                    "Regression": regression,
+                                }
+                            test_name = "Pearson correlation"
+
+                        elif analysis_name == "Simple linear regression":
+                            result = simple_linear_regression(
+                                df,
+                                candidate["predictor"],
+                                candidate["response"],
+                            )
+                            test_name = "Simple linear regression"
+
+                        if result is None:
+                            st.error(
+                                "StatsYuri could not execute this analysis on the "
+                                "current data. Check the matched columns and sample sizes."
+                            )
+                        else:
+                            st.write("### Answer")
+
+                            result_rows = []
+                            for key, value in result.items():
+                                if isinstance(value, (list, tuple)):
+                                    continue
+                                if isinstance(value, dict):
+                                    continue
+                                result_rows.append({
+                                    "Measure": key,
+                                    "Value": value,
+                                })
+
+                            if result_rows:
+                                st.dataframe(
+                                    pd.DataFrame(result_rows),
+                                    use_container_width=True,
+                                    hide_index=True,
+                                )
+
+                            p_value = result.get("P-Value")
+
+                            if p_value is not None:
+                                decision = decision_from_result(
+                                    p_value,
+                                    alpha=0.05,
+                                    test_name=test_name,
+                                )
+
+                                st.write("### Statistical Decision")
+                                st.dataframe(
+                                    pd.DataFrame([decision]),
+                                    use_container_width=True,
+                                    hide_index=True,
+                                )
+
+                                if p_value < 0.05:
+                                    st.success(
+                                        "At α = 0.05, the result is statistically significant."
+                                    )
+                                else:
+                                    st.info(
+                                        "At α = 0.05, the result is not statistically significant."
+                                    )
+
+                                st.caption(
+                                    "Interpret the statistical result in the context "
+                                    "of the study design. Statistical significance does "
+                                    "not by itself establish causation."
+                                )
+
+                            if test_name == "Pearson correlation":
+                                st.write(
+                                    "**Interpretation:** "
+                                    + interpret_correlation(
+                                        result["Pearson r"]
+                                    )
+                                )
+
+                            elif test_name == "Simple linear regression":
+                                slope = result.get("Slope")
+                                r_squared = result.get("R-Squared")
+                                if slope is not None and r_squared is not None:
+                                    st.write(
+                                        f"**Interpretation:** The fitted relationship "
+                                        f"has a slope of {slope:.4f} and explains "
+                                        f"{r_squared:.2%} of the variation in the response "
+                                        f"within this sample."
+                                    )
+
+                            elif test_name == "Welch two-sample t-test":
+                                st.write(
+                                    f"**Interpretation:** The observed mean difference "
+                                    f"between {result['Group 1']} and {result['Group 2']} "
+                                    f"is {result['Mean Difference']:.4f}."
+                                )
+
+                            elif test_name == "One-way ANOVA":
+                                means = ", ".join(
+                                    f"{group}: {mean:.2f}"
+                                    for group, mean in zip(
+                                        result["Group Labels"],
+                                        result["Group Means"],
+                                    )
+                                )
+                                st.write(
+                                    f"**Interpretation:** The observed group means are "
+                                    f"{means}. ANOVA tests whether at least one group mean "
+                                    f"differs from the others."
+                                )
+
+                            elif test_name == "Chi-square test of independence":
+                                st.write(
+                                    "**Interpretation:** The chi-square test evaluates "
+                                    "whether the two categorical variables are statistically "
+                                    "independent in this sample."
+                                )
+
+                            if result.get("Regression"):
+                                st.write("### Regression Result")
+                                regression = result["Regression"]
+                                regression_rows = [
+                                    {"Measure": key, "Value": value}
+                                    for key, value in regression.items()
+                                    if not isinstance(value, (list, tuple, dict))
+                                ]
+                                st.dataframe(
+                                    pd.DataFrame(regression_rows),
+                                    use_container_width=True,
+                                    hide_index=True,
+                                )
 
         st.subheader("Assumption Checking")
 
