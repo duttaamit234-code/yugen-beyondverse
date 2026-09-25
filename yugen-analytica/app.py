@@ -161,7 +161,7 @@ if uploaded_file is not None or text_dataset is not None:
         else:
             uploaded_extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
 
-                if uploaded_extension == "pdf":
+            if uploaded_extension == "pdf":
                 pdf_info = detect_pdf(uploaded_file)
 
                 st.write("### PDF Detection")
