@@ -606,6 +606,133 @@ def _build_statistical_plan(question, intent, candidate):
     plan["decision_rule"] = (
         f"Compare the relevant p-value with α = {alpha:.3f}; reject H₀ when p < α."
     )
+
+    # A useful statistical plan should explain not only the test name, but
+    # what is being estimated, why this model fits, what can invalidate it,
+    # and what should be reported after the test.
+    plan["analysis_justification"] = (
+        f"{analysis} is selected because the stated research problem "
+        "matches the comparison, association, prediction, or experimental "
+        "structure described in the question."
+    )
+    plan["estimand"] = (
+        "The primary quantity being tested or estimated under the stated model."
+    )
+    plan["evidence_to_report"] = [
+        "Sample size and descriptive summaries for the relevant variables.",
+        "Test statistic, degrees of freedom when applicable, and p-value.",
+        "Effect size and a confidence interval when the required calculation is available.",
+    ]
+    plan["data_validation"] = [
+        "Confirm the required variables are present and have appropriate measurement types.",
+        "Remove or document missing observations used by the analysis.",
+        "Check that observations match the independence or pairing structure stated in the problem.",
+    ]
+    plan["interpretation_guardrails"] = [
+        "Statistical significance does not by itself establish practical importance.",
+        "Association or group differences should not automatically be interpreted as causation unless the study design supports a causal conclusion.",
+        "Report uncertainty and effect magnitude alongside the p-value.",
+    ]
+
+    if analysis == "Welch two-sample t-test":
+        plan.update({
+            "estimand": "Difference between the two population means (μ₁ − μ₂).",
+            "analysis_justification": (
+                "Welch's t-test is appropriate for two independent groups with a "
+                "numerical response because it tests a mean difference without "
+                "assuming equal population variances."
+            ),
+            "evidence_to_report": [
+                "n, mean, and standard deviation for each group.",
+                "Mean difference with a confidence interval.",
+                "Welch t-statistic, Welch-Satterthwaite degrees of freedom, and p-value.",
+                "A standardized effect size such as Cohen's d, with its interpretation kept separate from significance.",
+            ],
+            "data_validation": [
+                "Verify exactly two independent groups are present.",
+                "Check sample sizes and missing values within each group.",
+                "Inspect extreme observations and group distributions.",
+                "Use Welch's unequal-variance formulation rather than silently assuming equal variances.",
+            ],
+            "follow_up": [
+                "Report the estimated mean difference and its confidence interval.",
+                "Report an effect size to describe magnitude.",
+                "If the normal approximation is questionable, consider a robust or non-parametric sensitivity analysis.",
+            ],
+        })
+    elif analysis == "One-way ANOVA":
+        plan.update({
+            "estimand": "The set of population mean differences across the independent groups.",
+            "analysis_justification": (
+                "One-way ANOVA tests a common mean-equality hypothesis across "
+                "three or more independent groups while controlling the overall "
+                "omnibus Type-I error for the primary comparison."
+            ),
+            "evidence_to_report": [
+                "Sample size and mean/standard deviation for every group.",
+                "ANOVA F-statistic, numerator and denominator degrees of freedom, and p-value.",
+                "Eta-squared or another appropriate effect size.",
+                "Adjusted pairwise comparisons when the omnibus test is significant.",
+            ],
+        })
+    elif analysis == "Paired t-test":
+        plan.update({
+            "estimand": "Mean paired change, μ_d, between the two matched measurements.",
+            "analysis_justification": (
+                "The paired t-test analyzes within-pair differences, removing "
+                "between-subject variation when the same units are measured twice."
+            ),
+            "evidence_to_report": [
+                "Number of complete pairs and mean paired difference.",
+                "Confidence interval for the mean difference.",
+                "t-statistic, degrees of freedom, and p-value.",
+                "A paired standardized effect size where available.",
+            ],
+        })
+    elif analysis == "Pearson correlation":
+        plan.update({
+            "estimand": "Population Pearson correlation coefficient ρ.",
+            "analysis_justification": (
+                "Pearson correlation quantifies the direction and strength of a "
+                "linear association between two numerical variables."
+            ),
+            "evidence_to_report": [
+                "Sample size and Pearson r.",
+                "Confidence interval for r when available.",
+                "Test statistic and p-value for H₀: ρ = 0.",
+                "A scatterplot and outlier/linearity assessment.",
+            ],
+        })
+    elif analysis == "Simple linear regression":
+        plan.update({
+            "estimand": "Population regression slope β₁ and the fitted conditional mean response.",
+            "analysis_justification": (
+                "Simple linear regression models a numerical response as a "
+                "function of one numerical predictor and separates the estimated "
+                "slope from unexplained residual variation."
+            ),
+            "evidence_to_report": [
+                "Regression equation, slope and intercept.",
+                "R² and slope p-value.",
+                "Confidence interval for the slope.",
+                "Residual diagnostics and, for prediction, a prediction interval for an individual future observation.",
+            ],
+        })
+    elif analysis == "Chi-square test of independence":
+        plan.update({
+            "estimand": "Departure of the observed contingency-table frequencies from independence.",
+            "analysis_justification": (
+                "The chi-square independence test compares observed cell counts "
+                "with the counts expected if the two categorical variables were independent."
+            ),
+            "evidence_to_report": [
+                "Observed and expected contingency tables.",
+                "Chi-square statistic, degrees of freedom, and p-value.",
+                "Cramér's V as an association effect size.",
+                "Cell-level patterns or adjusted residuals when interpretation of a significant result is needed.",
+            ],
+        })
+
     return plan
 
 
