@@ -125,76 +125,77 @@ def _norm(text):
     return re.sub(r"\s+", " ", str(text).lower().replace("_", " ")).strip()
 
 
-def detect_experimental_design(problem):
-    """Detect an experimental design from randomization and error structure cues.
+def _design_structure_evidence(text):
+    """Extract structural cues that distinguish DOE designs."""
+    return {
+        "has_block": bool(re.search(r"\b(?:block|blocking|replication|replicate|rep)\b", text)),
+        "has_row": bool(re.search(r"\brows?\b", text)),
+        "has_column": bool(re.search(r"\bcolumns?\b", text)),
+        "has_whole_plot": bool(re.search(r"whole[- ]plot|main[- ]plot|large[- ]plot", text)),
+        "has_subplot": bool(re.search(r"sub[- ]plot|subplot|small[- ]plot", text)),
+        "has_subsubplot": bool(re.search(r"sub[- ]sub[- ]plot|subsubplot", text)),
+        "has_strips": bool(re.search(r"strip[- ]plot|crossed strips", text)),
+        "has_factorial": bool(re.search(r"\bfactorial\b|\b(?:two|three|multiple|several)\s+factors?\b", text)),
+        "explicit_no_block": bool(re.search(r"(?:no|without|independent of|not using)\s+(?:blocks?|blocking|replication)", text)),
+        "complete_randomization": bool(re.search(r"completely randomi[sz]ed|complete randomization|\bcrd\b", text)),
+    }
 
-    Generic words such as "randomized" or "groups" are intentionally not
-    sufficient. A design is reported only when the narrative contains a
-    structural cue that distinguishes it from competing designs.
-    """
+
+def detect_experimental_design(problem):
+    """Detect DOE from randomization and error structure, not loose keywords."""
     text = _norm(problem)
+    evidence = _design_structure_evidence(text)
     matches = []
 
-    for rule in DESIGN_RULES:
-        hits = [pattern for pattern in rule["patterns"] if re.search(pattern, text)]
-        if len(hits) >= rule.get("required", 1):
-            matches.append(
-                {
-                    "design": rule["design"],
-                    "analysis": rule["analysis"],
-                    "description": rule["description"],
-                    "matched_cues": hits,
-                    "confidence": min(0.99, 0.72 + 0.06 * len(hits)),
-                }
-            )
+    if evidence["has_subsubplot"] and evidence["has_subplot"]:
+        matches.append(("Split-Split Plot Design", "Split-split-plot ANOVA",
+                        "Three nested randomization levels: whole-plot, subplot, and sub-subplot factors.", 0.97))
+    elif evidence["has_whole_plot"] and evidence["has_subplot"]:
+        matches.append(("Split-Plot Design", "Split-plot ANOVA",
+                        "One factor is randomized to whole plots and another factor within whole plots.", 0.96))
+    elif evidence["has_strips"]:
+        matches.append(("Strip-Plot Design", "Strip-plot ANOVA",
+                        "Two factors are randomized to crossing strips within blocks.", 0.96))
+    elif evidence["has_row"] and evidence["has_column"] and re.search(
+        r"(?:each|every)\s+treatment.*(?:once|one)\s+(?:in|per)\s+(?:each|every)\s+row.*(?:and|,)\s*(?:each|every)\s+column",
+        text,
+    ):
+        matches.append(("Latin Square Design", "Latin-square ANOVA",
+                        "Each treatment occurs once in every row and every column, controlling two blocking directions.", 0.99))
+    elif evidence["has_factorial"] and evidence["has_block"]:
+        matches.append(("Factorial Randomized Block Design", "Factorial RBD ANOVA",
+                        "Two or more treatment factors are studied factorially within blocks.", 0.95))
+    elif evidence["has_factorial"] and (evidence["complete_randomization"] or evidence["explicit_no_block"]) and not evidence["has_block"]:
+        matches.append(("Factorial Completely Randomized Design", "Factorial CRD ANOVA",
+                        "Two or more crossed treatment factors are studied under complete randomization without blocking.", 0.95))
+    elif evidence["has_block"]:
+        matches.append(("Randomized Block Design", "Randomized-block ANOVA",
+                        "A treatment factor is randomized within blocks to control block-to-block variation.", 0.95))
+    elif evidence["complete_randomization"] or evidence["explicit_no_block"]:
+        matches.append(("Completely Randomized Design", "One-way ANOVA for CRD",
+                        "A treatment factor is randomly assigned to comparable experimental units without blocking.", 0.95))
 
     if not matches:
-        return {
-            "design": None,
-            "analysis": None,
-            "description": None,
-            "matched_cues": [],
-            "confidence": 0.0,
-        }
+        for rule in DESIGN_RULES:
+            hits = [pattern for pattern in rule["patterns"] if re.search(pattern, text)]
+            if len(hits) >= rule.get("required", 1):
+                matches.append((rule["design"], rule["analysis"], rule["description"],
+                                min(0.90, 0.70 + 0.06 * len(hits))))
+                break
 
-    # Reject CRD when blocking or nested randomization is explicitly present.
-    structural_text = text
-    if re.search(r"\b(?:block|blocking|row|column|whole[- ]plot|subplot|strip[- ]plot)\b", structural_text):
-        matches = [
-            item for item in matches
-            if item["design"] != "Completely Randomized Design"
-        ] or matches
+    if not matches:
+        return {"design": None, "analysis": None, "description": None,
+                "matched_cues": [], "confidence": 0.0, "structure": evidence}
 
-    # A single-factor RBD must not swallow an explicitly factorial design.
-    if re.search(r"\b(?:factorial|two|three|multiple|several)\s+factors?\b", structural_text):
-        factorial = [
-            item for item in matches
-            if "Factorial" in item["design"]
-        ]
-        if factorial:
-            matches = factorial
-
-    # Nested/strip structures are more specific than ordinary block designs.
-    specific_names = {
-        "Split-Split Plot Design",
-        "Split-Plot Design",
-        "Latin Square Design",
-        "Strip-Plot Design",
+    design, analysis, description, confidence = matches[0]
+    return {
+        "design": design,
+        "analysis": analysis,
+        "description": description,
+        "matched_cues": [key for key, value in evidence.items() if value],
+        "confidence": confidence,
+        "structure": evidence,
     }
-    specific = [item for item in matches if item["design"] in specific_names]
-    if specific:
-        matches = specific
-
-    # Prefer the design with the strongest structural evidence, then the
-    # number of independent matching cues.
-    matches.sort(
-        key=lambda item: (
-            item["confidence"],
-            len(item["matched_cues"]),
-        ),
-        reverse=True,
-    )
-    return matches[0]
 
 
 def extract_experimental_entities(problem):
