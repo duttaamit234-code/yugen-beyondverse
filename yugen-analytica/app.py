@@ -509,6 +509,225 @@ if uploaded_file is not None or embedded_text_df is not None:
         numeric_columns = get_numeric_columns(df)
 
 
+
+        # Focused question mode: run only the confirmed analysis selected from
+        # the research question. Do not run unrelated tests or generic sections.
+        focused_question_mode = bool(
+            research_question.strip()
+            and st.session_state.get("analysis_requested", False)
+        )
+
+        if focused_question_mode:
+            st.subheader("Question-Aware Analysis")
+            st.write(
+                "StatsYuri first identifies the study design and confirms one "
+                "compatible analysis. Solve then runs only that analysis. "
+                "Unrelated tests such as chi-square, correlation, regression, "
+                "and generic assumption tests are skipped."
+            )
+
+            focused_result = interpret_question(df, research_question.strip())
+            focused_status = focused_result["status"]
+            focused_confidence = focused_result["confidence"]
+            focused_plan = focused_result.get("plan", {})
+
+            if focused_status == "ready":
+                candidate = focused_result["candidates"][0]
+                st.success(
+                    f"Problem understood. Confirmed analysis: "
+                    f"{candidate['analysis']} "
+                    f"(confidence {focused_confidence:.0%})."
+                )
+            elif focused_status == "ambiguous":
+                candidate = None
+                st.warning(
+                    f"The question has more than one plausible interpretation "
+                    f"(confidence {focused_confidence:.0%})."
+                )
+            else:
+                candidate = None
+                st.info(
+                    f"More information is needed to select one defensible test "
+                    f"(confidence {focused_confidence:.0%})."
+                )
+
+            st.write(f"**Detected intent:** {focused_result['intent'] or 'Not identified'}")
+            st.write(f"**Reason:** {focused_result['reason']}")
+
+            if focused_plan.get("design"):
+                st.write("### Confirmed Study Design")
+                st.write(f"**Design:** {focused_plan.get('design')}")
+                st.write(f"**Analysis:** {focused_plan.get('analysis')}")
+                if focused_plan.get("treatment_factor"):
+                    st.write(f"**Treatment factor:** {focused_plan['treatment_factor']}")
+                if focused_plan.get("response"):
+                    st.write(f"**Response:** {focused_plan['response']}")
+                if focused_plan.get("blocking_factor"):
+                    st.write(f"**Blocking factor:** {focused_plan['blocking_factor']}")
+                if focused_plan.get("treatment_count"):
+                    st.write(f"**Treatment levels:** {focused_plan['treatment_count']}")
+                if focused_plan.get("block_count"):
+                    st.write(f"**Blocks / replications:** {focused_plan['block_count']}")
+
+            if focused_plan.get("hypotheses"):
+                st.write("### Hypotheses")
+                for hypothesis in focused_plan["hypotheses"]:
+                    st.write(f"- {hypothesis}")
+
+            if focused_result.get("matched_columns"):
+                st.write("### Matched Dataset Columns")
+                st.dataframe(
+                    pd.DataFrame([
+                        {
+                            "Column": item["column"],
+                            "Match Score": item["score"],
+                            "Question Evidence": item["evidence"],
+                        }
+                        for item in focused_result["matched_columns"]
+                    ]),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            if candidate:
+                st.info(
+                    f"Confirmed test: **{candidate['analysis']}**. "
+                    "No other statistical test will be executed for this question."
+                )
+
+                if st.button(
+                    "🧮 Solve",
+                    type="primary",
+                    key="focused_solve_analysis",
+                ):
+                    st.session_state["solve_requested"] = True
+                    st.rerun()
+
+                if st.session_state.get("solve_requested", False):
+                    analysis_name = candidate["analysis"]
+
+                    experimental_names = {
+                        "One-way ANOVA for CRD",
+                        "Randomized-block ANOVA",
+                        "Latin-square ANOVA",
+                        "Factorial CRD ANOVA",
+                        "Factorial RBD ANOVA",
+                        "Split-plot ANOVA",
+                        "Split-split-plot ANOVA",
+                        "Strip-plot ANOVA",
+                    }
+
+                    if analysis_name not in experimental_names:
+                        st.error(
+                            f"The confirmed analysis '{analysis_name}' is not yet "
+                            "available in the focused execution path."
+                        )
+                    else:
+                        design_result = run_experimental_design_analysis(
+                            df,
+                            research_question.strip(),
+                        )
+                        result = design_result.get("result")
+
+                        if design_result.get("error"):
+                            st.error(design_result["error"])
+                        elif result is None:
+                            st.error(
+                                "The confirmed analysis could not be executed on "
+                                "the current dataset."
+                            )
+                        else:
+                            st.write("### Confirmed Analysis Result")
+                            anova_table = result["ANOVA Table"].copy()
+
+                            treatment_column = design_result["roles"].get("treatment")
+                            treatment_rows = anova_table[
+                                anova_table["Source"].astype(str).str.contains(
+                                    str(treatment_column), regex=False
+                                )
+                                & ~anova_table["Source"].astype(str).str.contains(
+                                    str(design_result["roles"].get("block")), regex=False
+                                )
+                            ]
+
+                            if treatment_rows.empty:
+                                st.error(
+                                    "The treatment term could not be identified "
+                                    "in the confirmed ANOVA model."
+                                )
+                            else:
+                                row = treatment_rows.iloc[0]
+                                residual_df = float(
+                                    anova_table.loc[
+                                        anova_table["Source"] == "Residual",
+                                        "Degrees of Freedom",
+                                    ].iloc[0]
+                                )
+                                treatment_df = float(row["Degrees of Freedom"])
+                                f_calculated = float(row["F-Statistic"])
+                                p_value = float(row["P-Value"])
+                                alpha = float(candidate.get("alpha", 0.05))
+                                f_tabulated = stats.f.ppf(
+                                    1 - alpha,
+                                    treatment_df,
+                                    residual_df,
+                                )
+                                decision = (
+                                    "Reject H₀"
+                                    if p_value < alpha
+                                    else "Fail to reject H₀"
+                                )
+
+                                result_table = pd.DataFrame({
+                                    "Confirmed Test": ["Randomized Block ANOVA"],
+                                    "Treatment": [str(treatment_column)],
+                                    "F-calculated": [f_calculated],
+                                    "F-tabulated": [f_tabulated],
+                                    "df (treatment)": [int(treatment_df)],
+                                    "df (error)": [int(residual_df)],
+                                    "p-value": [p_value],
+                                    "Decision": [decision],
+                                })
+                                st.dataframe(
+                                    result_table.style.format({
+                                        "F-calculated": "{:.4f}",
+                                        "F-tabulated": "{:.4f}",
+                                        "p-value": lambda value:
+                                            "<0.000001"
+                                            if value < 0.000001
+                                            else f"{value:.6f}",
+                                    }),
+                                    use_container_width=True,
+                                    hide_index=True,
+                                )
+
+                                st.write(
+                                    f"**Compare:** F-calculated ({f_calculated:.4f}) "
+                                    f"{'>' if f_calculated > f_tabulated else '≤'} "
+                                    f"F-tabulated ({f_tabulated:.4f}) at α = {alpha:.2f}."
+                                )
+                                if p_value < alpha:
+                                    st.success(
+                                        "The fertilizer treatment means differ statistically "
+                                        "after accounting for block-to-block variation."
+                                    )
+                                else:
+                                    st.info(
+                                        "There is not sufficient statistical evidence that the "
+                                        "fertilizer treatment means differ after accounting for blocks."
+                                    )
+
+                                st.write("### Model ANOVA Table")
+                                st.dataframe(
+                                    anova_table,
+                                    use_container_width=True,
+                                    hide_index=True,
+                                )
+
+            # Stop before Automatic Analysis, Effect Sizes, Chi-Square,
+            # regression, and generic assumption-checking sections.
+            st.stop()
+
         st.subheader("Automatic Analysis")
 
         st.write(
