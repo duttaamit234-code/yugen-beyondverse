@@ -876,6 +876,13 @@ if uploaded_file is not None or embedded_text_df is not None:
                 if question_plan.get("blocking_factor"):
                     st.write(f"**Blocking factor:** {question_plan['blocking_factor']}")
                 st.write(f"**Error structure:** {question_plan.get('error_structure')}")
+                if question_plan.get("treatment_factor_label"):
+                    st.write(f"**Treatment factor:** {question_plan['treatment_factor_label']}")
+                if question_plan.get("randomization_structure"):
+                    st.write(f"**Randomization structure:** {question_plan['randomization_structure']}")
+                if question_plan.get("model_basis"):
+                    st.write(f"**Model basis:** {question_plan['model_basis']}")
+
                 st.write("**Design assumptions:**")
                 for assumption in question_plan.get("assumptions", []):
                     st.write(f"- {assumption}")
