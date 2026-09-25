@@ -153,36 +153,35 @@ if uploaded_file is not None:
                     f"{len(valid_results)} of {len(scanned_results)} page(s)."
                 )
 
-            elif pdf_info["Document Type"] == "text_pdf":
+            else:
+                pdf_tables = extract_pdf_tables(uploaded_file)
 
-            pdf_tables = extract_pdf_tables(uploaded_file)
+                if not pdf_tables:
+                    st.warning(
+                        "PDF text was detected, but no reliable table was detected. "
+                        "Please convert the relevant table page to PNG/JPG for OCR."
+                    )
+                    st.stop()
 
-            if not pdf_tables:
-                st.warning(
-                    "PDF text was detected, but no reliable table was detected. "
-                    "Please convert the relevant table page to PNG/JPG for OCR."
+                df = pd.concat(pdf_tables, ignore_index=True)
+                df = df.drop(columns=["__PDF_Page", "__PDF_Table"], errors="ignore")
+
+                st.success(
+                    f"Detected {len(pdf_tables)} table(s) across "
+                    f"{pdf_info['Pages']} page(s)."
                 )
-                st.stop()
 
-            df = pd.concat(pdf_tables, ignore_index=True)
-            df = df.drop(columns=["__PDF_Page", "__PDF_Table"], errors="ignore")
+                st.write("### PDF Table Review")
+                st.caption(
+                    "Review the extracted PDF table before statistical analysis."
+                )
 
-            st.success(
-                f"Detected {len(pdf_tables)} table(s) across "
-                f"{pdf_info['Pages']} page(s)."
-            )
-
-            st.write("### PDF Table Review")
-            st.caption(
-                "Review the extracted PDF table before statistical analysis."
-            )
-
-            df = st.data_editor(
-                df,
-                use_container_width=True,
-                num_rows="dynamic",
-                key="pdf_table_editor",
-            ).copy()
+                df = st.data_editor(
+                    df,
+                    use_container_width=True,
+                    num_rows="dynamic",
+                    key="pdf_table_editor",
+                ).copy()
 
         elif uploaded_extension in {"png", "jpg", "jpeg"}:
             st.info(
