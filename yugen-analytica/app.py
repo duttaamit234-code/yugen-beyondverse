@@ -161,145 +161,145 @@ if uploaded_file is not None or text_dataset is not None:
         else:
             uploaded_extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
 
-            if uploaded_extension == "pdf":
-            pdf_info = detect_pdf(uploaded_file)
+                if uploaded_extension == "pdf":
+                pdf_info = detect_pdf(uploaded_file)
 
-            st.write("### PDF Detection")
-            st.dataframe(
-                pd.DataFrame(pdf_info["Page Details"]),
-                use_container_width=True,
-                hide_index=True,
-            )
-
-            if pdf_info["Document Type"] == "scanned_pdf":
-                st.warning(
-                    "This PDF appears to be scanned or image-only. "
-                    "StatsYuri will render its pages and run OCR."
-                )
-
-                scanned_results = extract_tables_from_scanned_pdf(uploaded_file)
-
-                valid_results = [
-                    item for item in scanned_results
-                    if item["dataframe"] is not None
-                ]
-
-                if not valid_results:
-                    st.error(
-                        "OCR could not extract a reliable table from the scanned PDF."
-                    )
-                    st.stop()
-
-                st.write("### Scanned PDF OCR Results")
-
-                confidence_table = pd.DataFrame([
-                    {
-                        "Page": item["page"],
-                        "OCR Confidence": f"{item['confidence']:.1f}%",
-                    }
-                    for item in scanned_results
-                ])
+                st.write("### PDF Detection")
                 st.dataframe(
-                    confidence_table,
+                    pd.DataFrame(pdf_info["Page Details"]),
                     use_container_width=True,
                     hide_index=True,
                 )
 
-                df = pd.concat(
-                    [item["dataframe"] for item in valid_results],
-                    ignore_index=True,
-                )
-
-                st.write("### OCR Table Review")
-                st.caption(
-                    "Review and correct the OCR table before analysis."
-                )
-
-                df = st.data_editor(
-                    df.drop(columns=["__PDF_Page"], errors="ignore"),
-                    use_container_width=True,
-                    num_rows="dynamic",
-                    key="scanned_pdf_ocr_editor",
-                ).copy()
-
-                st.success(
-                    f"OCR extracted usable tables from "
-                    f"{len(valid_results)} of {len(scanned_results)} page(s)."
-                )
-
-            else:
-                pdf_tables = extract_pdf_tables(uploaded_file)
-
-                if not pdf_tables:
+                if pdf_info["Document Type"] == "scanned_pdf":
                     st.warning(
-                        "PDF text was detected, but no reliable table was detected. "
-                        "Please convert the relevant table page to PNG/JPG for OCR."
+                        "This PDF appears to be scanned or image-only. "
+                        "StatsYuri will render its pages and run OCR."
                     )
-                    st.stop()
 
-                df = pd.concat(pdf_tables, ignore_index=True)
-                df = df.drop(columns=["__PDF_Page", "__PDF_Table"], errors="ignore")
+                    scanned_results = extract_tables_from_scanned_pdf(uploaded_file)
+
+                    valid_results = [
+                        item for item in scanned_results
+                        if item["dataframe"] is not None
+                    ]
+
+                    if not valid_results:
+                        st.error(
+                            "OCR could not extract a reliable table from the scanned PDF."
+                        )
+                        st.stop()
+
+                    st.write("### Scanned PDF OCR Results")
+
+                    confidence_table = pd.DataFrame([
+                        {
+                            "Page": item["page"],
+                            "OCR Confidence": f"{item['confidence']:.1f}%",
+                        }
+                        for item in scanned_results
+                    ])
+                    st.dataframe(
+                        confidence_table,
+                        use_container_width=True,
+                        hide_index=True,
+                    )
+
+                    df = pd.concat(
+                        [item["dataframe"] for item in valid_results],
+                        ignore_index=True,
+                    )
+
+                    st.write("### OCR Table Review")
+                    st.caption(
+                        "Review and correct the OCR table before analysis."
+                    )
+
+                    df = st.data_editor(
+                        df.drop(columns=["__PDF_Page"], errors="ignore"),
+                        use_container_width=True,
+                        num_rows="dynamic",
+                        key="scanned_pdf_ocr_editor",
+                    ).copy()
+
+                    st.success(
+                        f"OCR extracted usable tables from "
+                        f"{len(valid_results)} of {len(scanned_results)} page(s)."
+                    )
+
+                else:
+                    pdf_tables = extract_pdf_tables(uploaded_file)
+
+                    if not pdf_tables:
+                        st.warning(
+                            "PDF text was detected, but no reliable table was detected. "
+                            "Please convert the relevant table page to PNG/JPG for OCR."
+                        )
+                        st.stop()
+
+                    df = pd.concat(pdf_tables, ignore_index=True)
+                    df = df.drop(columns=["__PDF_Page", "__PDF_Table"], errors="ignore")
+
+                    st.success(
+                        f"Detected {len(pdf_tables)} table(s) across "
+                        f"{pdf_info['Pages']} page(s)."
+                    )
+
+                    st.write("### PDF Table Review")
+                    st.caption(
+                        "Review the extracted PDF table before statistical analysis."
+                    )
+
+                    df = st.data_editor(
+                        df,
+                        use_container_width=True,
+                        num_rows="dynamic",
+                        key="pdf_table_editor",
+                    ).copy()
+
+            elif uploaded_extension in {"png", "jpg", "jpeg"}:
+                st.info(
+                    "Image detected. StatsYuri is extracting the table with OCR. "
+                    "Review the extracted table before using statistical analysis."
+                )
+
+                df, ocr_confidence = extract_table_from_image(uploaded_file)
 
                 st.success(
-                    f"Detected {len(pdf_tables)} table(s) across "
-                    f"{pdf_info['Pages']} page(s)."
+                    f"OCR table extraction completed. Average OCR confidence: "
+                    f"{ocr_confidence:.1f}%"
                 )
 
-                st.write("### PDF Table Review")
+                st.write("### OCR Editable Table Review")
                 st.caption(
-                    "Review the extracted PDF table before statistical analysis."
+                    "OCR is not guaranteed to be perfect. Correct any cells or "
+                    "column names here before continuing with analysis."
                 )
 
-                df = st.data_editor(
+                edited_df = st.data_editor(
                     df,
                     use_container_width=True,
                     num_rows="dynamic",
-                    key="pdf_table_editor",
-                ).copy()
-
-        elif uploaded_extension in {"png", "jpg", "jpeg"}:
-            st.info(
-                "Image detected. StatsYuri is extracting the table with OCR. "
-                "Review the extracted table before using statistical analysis."
-            )
-
-            df, ocr_confidence = extract_table_from_image(uploaded_file)
-
-            st.success(
-                f"OCR table extraction completed. Average OCR confidence: "
-                f"{ocr_confidence:.1f}%"
-            )
-
-            st.write("### OCR Editable Table Review")
-            st.caption(
-                "OCR is not guaranteed to be perfect. Correct any cells or "
-                "column names here before continuing with analysis."
-            )
-
-            edited_df = st.data_editor(
-                df,
-                use_container_width=True,
-                num_rows="dynamic",
-                key="ocr_table_editor",
-            )
-
-            df = edited_df.copy()
-
-            if st.checkbox(
-                "Use OCR table for analysis",
-                value=True,
-                key="ocr_confirmed",
-            ):
-                st.success(
-                    "OCR table accepted. The edited table will be used by "
-                    "the existing StatsYuri analysis pipeline."
+                    key="ocr_table_editor",
                 )
-            else:
-                st.stop()
 
-            else:
-                df = load_dataset(uploaded_file)
-                st.success("Dataset uploaded successfully.")
+                df = edited_df.copy()
+
+                if st.checkbox(
+                    "Use OCR table for analysis",
+                    value=True,
+                    key="ocr_confirmed",
+                ):
+                    st.success(
+                        "OCR table accepted. The edited table will be used by "
+                        "the existing StatsYuri analysis pipeline."
+                    )
+                else:
+                    st.stop()
+
+                else:
+                    df = load_dataset(uploaded_file)
+                    st.success("Dataset uploaded successfully.")
 
 
         st.subheader("Dataset Preview")
