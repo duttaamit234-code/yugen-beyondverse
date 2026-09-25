@@ -138,7 +138,14 @@ def _design_structure_evidence(text):
         "has_strips": bool(re.search(r"strip[- ]plot|crossed strips", text)),
         "has_factorial": bool(re.search(r"\bfactorial\b|\b(?:two|three|multiple|several)\s+factors?\b", text)),
         "explicit_no_block": bool(re.search(r"(?:no|without|independent of|not using)\s+(?:blocks?|blocking|replication)", text)),
-        "complete_randomization": bool(re.search(r"completely randomi[sz]ed|complete randomization|\bcrd\b", text)),
+        "complete_randomization": bool(re.search(
+            r"completely randomi[sz]ed|complete randomization|\bcrd\b|"
+            r"randomly (?:assigned|allocated|allotted|distributed) (?:to|among|across) "
+            r"(?:the\s+)?(?:treatments?|treatment levels?|groups?|methods?|conditions?|irrigation methods?|fertilizers?|varieties?)|"
+            r"(?:treatments?|treatment levels?|methods?|conditions?|groups?) "
+            r"(?:were|are|was) randomly (?:assigned|allocated|allotted|distributed)",
+            text,
+        )),
     }
 
 
@@ -172,9 +179,20 @@ def detect_experimental_design(problem):
     elif evidence["has_block"] and evidence["has_treatment"]:
         matches.append(("Randomized Block Design", "Randomized-block ANOVA",
                         "A treatment factor is randomized within blocks to control block-to-block variation.", 0.95))
-    elif evidence["has_treatment"] and (evidence["complete_randomization"] or evidence["explicit_no_block"]):
+    elif (
+        evidence["has_treatment"]
+        and evidence["complete_randomization"]
+        and not evidence["has_block"]
+    ):
         matches.append(("Completely Randomized Design", "One-way ANOVA for CRD",
-                        "A treatment factor is randomly assigned to comparable experimental units without blocking.", 0.95))
+                        "A single treatment factor is randomly assigned to comparable experimental units without blocking.", 0.97))
+    elif (
+        evidence["has_treatment"]
+        and evidence["explicit_no_block"]
+        and not evidence["has_block"]
+    ):
+        matches.append(("Completely Randomized Design", "One-way ANOVA for CRD",
+                        "A single treatment factor is assigned to comparable experimental units without a blocking factor.", 0.96))
 
     if not matches:
         for rule in DESIGN_RULES:
