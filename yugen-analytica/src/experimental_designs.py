@@ -282,6 +282,33 @@ def experimental_design_plan(problem):
         ],
     }
 
+    if entities["response"] and entities["treatment"]:
+        count_text = (
+            f" across {entities['treatment_count']} treatment levels"
+            if entities["treatment_count"] else ""
+        )
+        common["objective"] = (
+            f"Determine whether mean {entities['response'].lower()} differs "
+            f"among the {entities['treatment'].lower()} treatment groups{count_text}, "
+            "while accounting for the stated experimental structure."
+        )
+    else:
+        common["objective"] = detected["description"]
+
+    if entities["treatment_count"]:
+        common["design_details"] = (
+            f"{entities['treatment_count']} treatment levels"
+            + (
+                f" × {entities['block_count']} blocks"
+                if entities["block_count"] else ""
+            )
+        )
+    elif entities["block_count"]:
+        common["design_details"] = f"{entities['block_count']} blocks"
+
+    if entities["treatment_levels"]:
+        common["treatment_levels"] = entities["treatment_levels"]
+
     if design == "Randomized Block Design":
         common.update({
             "blocking_factor": entities["block"] or "Block",
