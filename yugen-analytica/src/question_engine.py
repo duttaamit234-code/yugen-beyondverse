@@ -327,7 +327,112 @@ def _explicit_analysis_request(question):
     return list(dict.fromkeys(requests))
 
 
-def interpret_question(df, question):
+
+def extract_tabular_text(text):
+    """Extract a simple CSV/TSV/pipe table embedded in a problem statement."""
+    lines = [line.strip() for line in str(text).splitlines() if line.strip()]
+    candidates = []
+    for delimiter in (",", "\t", "|"):
+        parsed = []
+        for line in lines:
+            raw = line.strip().strip("|")
+            parts = [part.strip() for part in raw.split(delimiter)]
+            if len(parts) >= 2:
+                parsed.append(parts)
+        if len(parsed) >= 3:
+            width = len(parsed[0])
+            consistent = [row for row in parsed if len(row) == width]
+            if len(consistent) >= 3 and width >= 2:
+                try:
+                    frame = pd.DataFrame(consistent[1:], columns=consistent[0])
+                    for column in frame.columns:
+                        numeric = pd.to_numeric(frame[column], errors="coerce")
+                        if numeric.notna().mean() >= 0.75:
+                            frame[column] = numeric
+                    if frame.shape[0] >= 2:
+                        candidates.append(frame)
+                except Exception:
+                    pass
+    return max(candidates, key=lambda frame: frame.shape[0] * frame.shape[1]) if candidates else None
+
+
+def _text_only_plan(question):
+    """Infer the required analysis from the problem statement alone."""
+    text = _normalize(question)
+    alpha = _extract_alpha(question)
+    candidates = []
+
+    if any(re.search(pattern, text) for pattern in INTENT_PATTERNS["paired_comparison"]):
+        candidates.append({
+            "analysis": "Paired t-test",
+            "alpha": alpha,
+            "reason": "The wording describes paired or before/after measurements.",
+        })
+    elif any(re.search(pattern, text) for pattern in INTENT_PATTERNS["prediction"]):
+        candidates.append({
+            "analysis": "Simple linear regression",
+            "alpha": alpha,
+            "reason": "The problem asks to predict or estimate an outcome from another variable.",
+        })
+    elif any(re.search(pattern, text) for pattern in INTENT_PATTERNS["categorical_association"]):
+        candidates.append({
+            "analysis": "Chi-square test of independence",
+            "alpha": alpha,
+            "reason": "The problem describes association or independence between categorical variables.",
+        })
+    elif any(re.search(pattern, text) for pattern in INTENT_PATTERNS["correlation"]):
+        candidates.append({
+            "analysis": "Pearson correlation",
+            "alpha": alpha,
+            "reason": "The problem asks about a relationship or linear association between numerical variables.",
+        })
+    elif any(re.search(pattern, text) for pattern in INTENT_PATTERNS["group_comparison"]):
+        group_count = re.search(
+            r"\b(\d+)\s+(?:independent\s+)?(?:groups?|methods?|treatments?|approaches?|conditions?)\b",
+            text,
+        )
+        three_or_more = bool(group_count and int(group_count.group(1)) >= 3)
+        three_or_more = three_or_more or bool(
+            re.search(
+                r"\b(?:three|four|five|several|multiple)\b.*\b(?:groups?|methods?|treatments?|approaches?)\b",
+                text,
+            )
+        )
+        candidates.append({
+            "analysis": "One-way ANOVA" if three_or_more else "Welch two-sample t-test",
+            "alpha": alpha,
+            "reason": (
+                "The problem describes comparing a numerical outcome across three or more independent groups."
+                if three_or_more
+                else "The problem describes comparing a numerical outcome between two independent groups."
+            ),
+        })
+    elif re.search(
+        r"\bmean\b.*\b(?:standard|benchmark|reference|hypothesized|population)\b",
+        text,
+    ):
+        candidates.append({
+            "analysis": "One-sample t-test",
+            "alpha": alpha,
+            "reason": "The problem compares a sample mean with a stated reference or population value.",
+        })
+
+    return candidates
+
+
+def _problem_type(intent):
+    return {
+        "group_comparison": "Comparison of independent groups",
+        "categorical_association": "Association between categorical variables",
+        "correlation": "Relationship between numerical variables",
+        "association": "Association between variables",
+        "prediction": "Prediction using numerical variables",
+        "paired_comparison": "Paired or before/after comparison",
+        "one_sample": "One-sample mean comparison",
+    }.get(intent, "Statistical problem")
+
+
+def interpret_question(df=None, question=""):
     """Turn an ordinary statistical problem into an explainable analysis plan.
 
     The parser can use study-design language, outcome/group semantics, and
@@ -342,6 +447,35 @@ def interpret_question(df, question):
             "matched_columns": [],
             "candidates": [],
             "reason": "Enter a research question.",
+        }
+
+    embedded_df = extract_tabular_text(question) if df is None else None
+    if df is None and embedded_df is not None:
+        df = embedded_df
+
+    if df is None:
+        intents = _detect_intents(question)
+        intent = intents[0][0] if intents else None
+        candidates = _text_only_plan(question)
+        return {
+            "status": "ready" if candidates else "needs_clarification",
+            "intent": intent,
+            "problem_type": _problem_type(intent),
+            "confidence": round(
+                min(0.96, 0.45 + 0.12 * (intents[0][1] if intents else 0))
+                if candidates else 0.20,
+                2,
+            ),
+            "alpha": _extract_alpha(question),
+            "matched_columns": [],
+            "candidates": candidates,
+            "reason": (
+                candidates[0]["reason"]
+                if candidates
+                else "Describe the outcome, comparison, relationship, prediction, or study design in the problem."
+            ),
+            "analysis_requests": _explicit_analysis_request(question),
+            "embedded_data": None,
         }
 
     numeric, categorical = _column_profile(df)
@@ -557,4 +691,7 @@ def interpret_question(df, question):
         "candidates": candidates[:6],
         "reason": reason,
         "analysis_requests": explicit_analyses,
+        "embedded_data": (
+            df.to_dict(orient="records") if embedded_df is not None else None
+        ),
     }
