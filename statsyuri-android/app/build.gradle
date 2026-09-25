@@ -43,8 +43,7 @@ chaquopy {
 
     sourceSets {
         main {
-            srcDir "../../yugen-analytica"
-            srcDir "src/main/python"
+            srcDirs = ["../../yugen-analytica", "src/main/python"]
         }
     }
 }
