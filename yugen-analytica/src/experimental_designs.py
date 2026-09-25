@@ -433,3 +433,147 @@ def strip_plot_anova(df, response, factor_a, factor_b, block):
         "A × B": "Residual",
     }
     return result
+
+
+def infer_design_columns(df, problem, design):
+    """Infer response/treatment/block roles from names and narrative semantics."""
+    text = _norm(problem)
+    numeric = [
+        col for col in df.select_dtypes(include="number").columns
+        if str(col).strip().lower() not in {"id", "index", "serial"}
+    ]
+    categorical = [
+        col for col in df.columns
+        if col not in numeric and df[col].nunique(dropna=True) >= 2
+    ]
+
+    def score(column, aliases):
+        name = _norm(column)
+        return sum(1 for alias in aliases if alias in name or alias in text and alias in name)
+
+    response = max(
+        numeric,
+        key=lambda col: score(
+            col,
+            ["yield", "score", "response", "height", "weight", "production",
+             "output", "growth", "rate", "value", "measurement"],
+        ),
+        default=None,
+    )
+
+    def choose(aliases, excluded=()):
+        available = [col for col in categorical if col not in excluded]
+        if not available:
+            return None
+        ranked = sorted(
+            available,
+            key=lambda col: score(col, aliases),
+            reverse=True,
+        )
+        return ranked[0]
+
+    if design in {"Completely Randomized Design", "Factorial Completely Randomized Design"}:
+        treatment = choose(
+            ["treatment", "fertilizer", "variety", "method", "dose", "irrigation"],
+        )
+        factor_b = None
+        if design == "Factorial Completely Randomized Design":
+            factor_b = choose(
+                ["factor b", "nitrogen", "irrigation", "dose", "variety", "method"],
+                excluded=(treatment,),
+            )
+        return {
+            "response": response,
+            "treatment": treatment,
+            "factor_a": treatment,
+            "factor_b": factor_b,
+        }
+
+    if design in {"Randomized Block Design", "Factorial Randomized Block Design"}:
+        treatment = choose(
+            ["treatment", "fertilizer", "variety", "method", "dose", "irrigation"],
+        )
+        block = choose(["block", "replication", "rep", "location", "farm", "field"], (treatment,))
+        factor_b = None
+        if design == "Factorial Randomized Block Design":
+            factor_b = choose(
+                ["factor b", "nitrogen", "irrigation", "dose", "variety", "method"],
+                excluded=(treatment, block),
+            )
+        return {
+            "response": response,
+            "treatment": treatment,
+            "block": block,
+            "factor_a": treatment,
+            "factor_b": factor_b,
+        }
+
+    if design == "Latin Square Design":
+        treatment = choose(["treatment", "fertilizer", "variety", "method", "dose"])
+        row = choose(["row", "replication", "rep"], (treatment,))
+        column = choose(["column", "col"], (treatment, row))
+        remaining = [col for col in categorical if col not in {treatment, row, column}]
+        if row is None and remaining:
+            row = remaining[0]
+        if column is None and remaining:
+            column = remaining[0]
+        return {
+            "response": response,
+            "treatment": treatment,
+            "row": row,
+            "column": column,
+        }
+
+    if design in {"Split-Plot Design", "Split-Split Plot Design", "Strip-Plot Design"}:
+        factor_a = choose(["main plot", "whole plot", "factor a", "irrigation", "variety", "treatment"])
+        factor_b = choose(["subplot", "factor b", "nitrogen", "dose", "fertilizer"], (factor_a,))
+        factor_c = None
+        if design == "Split-Split Plot Design":
+            factor_c = choose(["sub-subplot", "factor c", "variety", "dose", "time"], (factor_a, factor_b))
+        block = choose(["block", "replication", "rep"], (factor_a, factor_b, factor_c))
+        return {
+            "response": response,
+            "factor_a": factor_a,
+            "factor_b": factor_b,
+            "factor_c": factor_c,
+            "block": block,
+        }
+
+    return {}
+
+
+def run_experimental_design_analysis(df, problem, design=None):
+    """Infer roles and run the corresponding experimental-design ANOVA."""
+    detected = detect_experimental_design(problem)
+    design = design or detected["design"]
+    if not design:
+        return None
+
+    roles = infer_design_columns(df, problem, design)
+    response = roles.get("response")
+    if not response:
+        return {"design": design, "roles": roles, "result": None, "error": "No numerical response was identified."}
+
+    try:
+        if design == "Completely Randomized Design":
+            result = crd_anova(df, response, roles.get("treatment"))
+        elif design == "Randomized Block Design":
+            result = rbd_anova(df, response, roles.get("treatment"), roles.get("block"))
+        elif design == "Latin Square Design":
+            result = latin_square_anova(df, response, roles.get("treatment"), roles.get("row"), roles.get("column"))
+        elif design == "Factorial Completely Randomized Design":
+            result = factorial_crd_anova(df, response, roles.get("factor_a"), roles.get("factor_b"))
+        elif design == "Factorial Randomized Block Design":
+            result = factorial_rbd_anova(df, response, roles.get("factor_a"), roles.get("factor_b"), roles.get("block"))
+        elif design == "Split-Plot Design":
+            result = split_plot_anova(df, response, roles.get("factor_a"), roles.get("factor_b"), roles.get("block"))
+        elif design == "Split-Split Plot Design":
+            result = split_split_plot_anova(df, response, roles.get("factor_a"), roles.get("factor_b"), roles.get("factor_c"), roles.get("block"))
+        elif design == "Strip-Plot Design":
+            result = strip_plot_anova(df, response, roles.get("factor_a"), roles.get("factor_b"), roles.get("block"))
+        else:
+            result = None
+    except Exception as exc:
+        return {"design": design, "roles": roles, "result": None, "error": str(exc)}
+
+    return {"design": design, "roles": roles, "result": result, "error": None}
