@@ -81,6 +81,7 @@ st.markdown(
     .stApp {
         position: relative;
         overflow-x: hidden;
+        isolation: isolate;
         background-image:
             linear-gradient(rgba(120, 190, 210, 0.025) 1px, transparent 1px),
             linear-gradient(90deg, rgba(120, 190, 210, 0.025) 1px, transparent 1px);
@@ -94,7 +95,7 @@ st.markdown(
         position: fixed;
         inset: 0;
         pointer-events: none;
-        z-index: 0;
+        z-index: -1;
         background:
             radial-gradient(circle at 18% 35%, rgba(80, 180, 220, 0.07), transparent 22%),
             radial-gradient(circle at 82% 68%, rgba(100, 210, 190, 0.06), transparent 25%);
@@ -111,7 +112,7 @@ st.markdown(
         height: 45vh;
         transform: translateX(-50%);
         pointer-events: none;
-        z-index: 0;
+        z-index: -1;
         opacity: 0.13;
         background-repeat: no-repeat;
         background-position:
@@ -149,7 +150,9 @@ st.markdown(
     }
 
     /* Keep the real Streamlit interface above the decoration. */
+    [data-testid="stAppViewContainer"],
     [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stAppViewContainer"] .block-container,
     [data-testid="stHeader"] {
         position: relative;
         z-index: 1;
