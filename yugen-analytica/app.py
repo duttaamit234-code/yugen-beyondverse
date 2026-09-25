@@ -721,8 +721,17 @@ if uploaded_file is not None or embedded_text_df is not None:
                                     )
 
                                 st.write("### ANOVA Details")
+                                display_anova = anova_table.copy()
+                                source_labels = {
+                                    f'C(Q("{design_result["roles"].get("block")}"))': "Block",
+                                    f'C(Q("{design_result["roles"].get("treatment")}"))': "Fertilizer",
+                                    "Residual": "Error",
+                                }
+                                display_anova["Source"] = display_anova["Source"].replace(
+                                    source_labels
+                                )
                                 st.dataframe(
-                                    anova_table,
+                                    display_anova,
                                     use_container_width=True,
                                     hide_index=True,
                                 )
