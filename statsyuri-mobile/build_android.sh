@@ -28,8 +28,14 @@ import sys
 
 root = Path(sys.argv[1])
 app = root / "android/app/build.gradle.kts"
-top = root / "android/build.gradle"
+if not app.exists():
+    app = root / "android/app/build.gradle"
+top = root / "android/build.gradle.kts"
+if not top.exists():
+    top = root / "android/build.gradle"
 settings = root / "android/settings.gradle.kts"
+if not settings.exists():
+    settings = root / "android/settings.gradle"
 manifest = root / "android/app/src/main/AndroidManifest.xml"
 
 s = app.read_text()
@@ -61,6 +67,8 @@ if 'id("com.chaquo.python")' not in t:
     id("com.chaquo.python") version "17.0.0" apply false
 }
 '''
+if 'id("com.chaquo.python")' not in t:
+    t = 'plugins {\n    id("com.chaquo.python") version "17.0.0" apply false\n}\n\n' + t
 top.write_text(t)
 
 st = settings.read_text()
