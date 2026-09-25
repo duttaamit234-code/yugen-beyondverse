@@ -73,187 +73,120 @@ st.set_page_config(
 )
 
 # Subtle animated statistical background.
-# It stays behind the interface, never captures taps, and scales down on mobile.
+# CSS-only so Streamlit never renders decorative markup as visible text.
 st.markdown(
     """
     <style>
-    .statsyuri-bg {
+    /* Statistical plotting grid */
+    .stApp {
+        position: relative;
+        overflow-x: hidden;
+        background-image:
+            linear-gradient(rgba(120, 190, 210, 0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(120, 190, 210, 0.025) 1px, transparent 1px);
+        background-size: 42px 42px;
+        background-position: center top;
+    }
+
+    /* Soft moving statistical glow */
+    .stApp::before {
+        content: "";
         position: fixed;
         inset: 0;
-        z-index: 0;
         pointer-events: none;
-        overflow: hidden;
-        opacity: 0.34;
+        z-index: 0;
+        background:
+            radial-gradient(circle at 18% 35%, rgba(80, 180, 220, 0.07), transparent 22%),
+            radial-gradient(circle at 82% 68%, rgba(100, 210, 190, 0.06), transparent 25%);
+        animation: statsyuri-glow 12s ease-in-out infinite alternate;
     }
 
-    .statsyuri-grid {
-        position: absolute;
-        inset: 0;
+    /* Faint animated histogram behind the content */
+    .stApp::after {
+        content: "";
+        position: fixed;
+        left: 50%;
+        bottom: -5vh;
+        width: min(1050px, 120vw);
+        height: 45vh;
+        transform: translateX(-50%);
+        pointer-events: none;
+        z-index: 0;
+        opacity: 0.13;
+        background-repeat: no-repeat;
+        background-position:
+            3% 100%, 8% 100%, 13% 100%, 18% 100%, 23% 100%,
+            28% 100%, 33% 100%, 38% 100%, 43% 100%, 48% 100%,
+            53% 100%, 58% 100%, 63% 100%, 68% 100%, 73% 100%,
+            78% 100%, 83% 100%, 88% 100%, 93% 100%;
+        background-size:
+            3% 28%, 3% 54%, 3% 39%, 3% 72%, 3% 46%,
+            3% 84%, 3% 61%, 3% 91%, 3% 49%, 3% 68%,
+            3% 37%, 3% 77%, 3% 57%, 3% 87%, 3% 44%,
+            3% 71%, 3% 52%, 3% 81%, 3% 63%;
         background-image:
-            linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
-        background-size: 42px 42px;
-        mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 82%, transparent 100%);
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
+            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75));
+        animation: statsyuri-chart 6s ease-in-out infinite alternate;
+        transform-origin: bottom center;
     }
 
-    .statsyuri-chart {
-        position: absolute;
-        left: 50%;
-        bottom: -2vh;
-        width: min(1100px, 110vw);
-        height: 43vh;
-        transform: translateX(-50%);
-        display: flex;
-        align-items: flex-end;
-        justify-content: center;
-        gap: clamp(7px, 1.2vw, 18px);
-        opacity: 0.18;
-    }
-
-    .statsyuri-bar {
-        width: clamp(10px, 2vw, 24px);
-        min-height: 8%;
-        border-radius: 8px 8px 2px 2px;
-        background: linear-gradient(to top, rgba(90,150,255,0.18), rgba(80,210,190,0.72));
-        box-shadow: 0 0 18px rgba(80,190,210,0.16);
-        transform-origin: bottom;
-        animation: statsyuri-bars 5.5s ease-in-out infinite;
-    }
-
-    .statsyuri-bar:nth-child(2n) { animation-delay: -1.1s; }
-    .statsyuri-bar:nth-child(3n) { animation-delay: -2.2s; }
-    .statsyuri-bar:nth-child(4n) { animation-delay: -3.3s; }
-    .statsyuri-bar:nth-child(5n) { animation-delay: -4.4s; }
-
-    @keyframes statsyuri-bars {
-        0%, 100% { transform: scaleY(0.58); }
-        50% { transform: scaleY(1.45); }
-    }
-
-    .statsyuri-curve {
-        position: absolute;
-        left: 50%;
-        bottom: 18vh;
-        width: min(900px, 100vw);
-        height: 220px;
-        transform: translateX(-50%);
-        opacity: 0.17;
-    }
-
-    .statsyuri-curve path {
-        fill: none;
-        stroke: rgba(110, 220, 205, 0.9);
-        stroke-width: 2;
-        stroke-dasharray: 12 10;
-        animation: statsyuri-flow 8s linear infinite;
-    }
-
-    @keyframes statsyuri-flow {
-        to { stroke-dashoffset: -176; }
-    }
-
-    .statsyuri-dots span {
-        position: absolute;
-        width: 5px;
-        height: 5px;
-        border-radius: 50%;
-        background: rgba(110, 210, 230, 0.65);
-        box-shadow: 0 0 12px rgba(110, 210, 230, 0.35);
-        animation: statsyuri-float 9s ease-in-out infinite;
-    }
-
-    .statsyuri-dots span:nth-child(1) { left: 12%; top: 24%; animation-delay: -2s; }
-    .statsyuri-dots span:nth-child(2) { left: 26%; top: 61%; animation-delay: -6s; }
-    .statsyuri-dots span:nth-child(3) { left: 71%; top: 27%; animation-delay: -4s; }
-    .statsyuri-dots span:nth-child(4) { left: 84%; top: 57%; animation-delay: -7s; }
-    .statsyuri-dots span:nth-child(5) { left: 55%; top: 14%; animation-delay: -1s; }
-    .statsyuri-dots span:nth-child(6) { left: 43%; top: 72%; animation-delay: -5s; }
-
-    @keyframes statsyuri-float {
-        0%, 100% { transform: translate(0, 0) scale(0.8); opacity: 0.25; }
-        50% { transform: translate(12px, -22px) scale(1.35); opacity: 0.8; }
-    }
-
-    .statsyuri-bg .statsyuri-label {
-        position: absolute;
-        right: 5vw;
-        top: 22vh;
-        font: 600 12px/1.2 monospace;
-        letter-spacing: 0.18em;
-        color: rgba(150, 220, 220, 0.2);
-        transform: rotate(-90deg);
-    }
-
-    @media (prefers-reduced-motion: reduce) {
-        .statsyuri-bar,
-        .statsyuri-curve path,
-        .statsyuri-dots span {
-            animation: none !important;
-        }
-    }
-
-    @media (max-width: 700px) {
-        .statsyuri-bg { opacity: 0.23; }
-        .statsyuri-chart {
-            height: 30vh;
-            gap: 5px;
-        }
-        .statsyuri-curve {
-            bottom: 13vh;
-            height: 150px;
-        }
-        .statsyuri-grid { background-size: 30px 30px; }
-        .statsyuri-bg .statsyuri-label { display: none; }
-    }
-
-    /* Keep Streamlit's actual controls/content above the decorative layer. */
-    [data-testid="stAppViewContainer"] > .main {
+    /* Keep the real Streamlit interface above the decoration. */
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stHeader"] {
         position: relative;
         z-index: 1;
     }
+
+    @keyframes statsyuri-chart {
+        0% { transform: translateX(-50%) scaleY(0.82); }
+        50% { transform: translateX(-50%) scaleY(1.05); }
+        100% { transform: translateX(-50%) scaleY(0.9); }
+    }
+
+    @keyframes statsyuri-glow {
+        0% { opacity: 0.65; transform: scale(1); }
+        100% { opacity: 1; transform: scale(1.08); }
+    }
+
+    @media (max-width: 700px) {
+        .stApp {
+            background-size: 30px 30px;
+        }
+        .stApp::after {
+            height: 30vh;
+            width: 125vw;
+            opacity: 0.09;
+        }
+        .stApp::before {
+            opacity: 0.7;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .stApp::before,
+        .stApp::after {
+            animation: none !important;
+        }
+    }
     </style>
-
-    <div class="statsyuri-bg" aria-hidden="true">
-        <div class="statsyuri-grid"></div>
-
-        <div class="statsyuri-chart">
-            <span class="statsyuri-bar" style="height:28%"></span>
-            <span class="statsyuri-bar" style="height:54%"></span>
-            <span class="statsyuri-bar" style="height:37%"></span>
-            <span class="statsyuri-bar" style="height:72%"></span>
-            <span class="statsyuri-bar" style="height:46%"></span>
-            <span class="statsyuri-bar" style="height:84%"></span>
-            <span class="statsyuri-bar" style="height:61%"></span>
-            <span class="statsyuri-bar" style="height:92%"></span>
-            <span class="statsyuri-bar" style="height:49%"></span>
-            <span class="statsyuri-bar" style="height:68%"></span>
-            <span class="statsyuri-bar" style="height:39%"></span>
-            <span class="statsyuri-bar" style="height:77%"></span>
-            <span class="statsyuri-bar" style="height:57%"></span>
-            <span class="statsyuri-bar" style="height:88%"></span>
-            <span class="statsyuri-bar" style="height:44%"></span>
-            <span class="statsyuri-bar" style="height:70%"></span>
-            <span class="statsyuri-bar" style="height:52%"></span>
-            <span class="statsyuri-bar" style="height:81%"></span>
-            <span class="statsyuri-bar" style="height:34%"></span>
-            <span class="statsyuri-bar" style="height:63%"></span>
-            <span class="statsyuri-bar" style="height:48%"></span>
-            <span class="statsyuri-bar" style="height:74%"></span>
-            <span class="statsyuri-bar" style="height:42%"></span>
-            <span class="statsyuri-bar" style="height:86%"></span>
-        </div>
-
-        <svg class="statsyuri-curve" viewBox="0 0 900 220" preserveAspectRatio="none">
-            <path d="M0,205 C115,205 145,183 220,128 C290,76 330,26 450,24 C570,26 610,76 680,128 C755,183 785,205 900,205"></path>
-        </svg>
-
-        <div class="statsyuri-dots">
-            <span></span><span></span><span></span>
-            <span></span><span></span><span></span>
-        </div>
-
-        <div class="statsyuri-label">DATA • DISTRIBUTION • INFERENCE</div>
-    </div>
     """,
     unsafe_allow_html=True,
 )
