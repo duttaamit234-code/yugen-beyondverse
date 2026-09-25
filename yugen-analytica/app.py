@@ -169,6 +169,45 @@ st.markdown(
         100% { opacity: 1; transform: scale(1.08); }
     }
 
+    /* Brighter blue treatment for light mode. */
+    @media (prefers-color-scheme: light) {
+        .stApp {
+            background-image:
+                linear-gradient(rgba(30, 120, 230, 0.055) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30, 120, 230, 0.055) 1px, transparent 1px);
+        }
+
+        .stApp::before {
+            background:
+                radial-gradient(circle at 18% 35%, rgba(30, 130, 255, 0.14), transparent 24%),
+                radial-gradient(circle at 82% 68%, rgba(0, 180, 220, 0.11), transparent 27%);
+        }
+
+        .stApp::after {
+            opacity: 0.22;
+            background-image:
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72));
+        }
+    }
+
     @media (max-width: 700px) {
         .stApp {
             background-size: 30px 30px;
