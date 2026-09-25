@@ -173,20 +173,20 @@ st.markdown(
     @media (prefers-color-scheme: light) {
         .stApp {
             background-image:
-                linear-gradient(rgba(30, 120, 230, 0.055) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(30, 120, 230, 0.055) 1px, transparent 1px);
+                linear-gradient(rgba(20, 105, 220, 0.085) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(20, 105, 220, 0.085) 1px, transparent 1px);
         }
 
         .stApp::before {
             background:
-                radial-gradient(circle at 18% 35%, rgba(30, 130, 255, 0.14), transparent 24%),
-                radial-gradient(circle at 82% 68%, rgba(0, 180, 220, 0.11), transparent 27%);
+                radial-gradient(circle at 18% 35%, rgba(30, 120, 255, 0.18), transparent 24%),
+                radial-gradient(circle at 82% 68%, rgba(0, 165, 235, 0.15), transparent 27%);
         }
 
         .stApp::after {
-            opacity: 0.22;
+            opacity: 0.34;
             background-image:
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
+                linear-gradient(to top, rgba(20, 90, 220, 0.26), rgba(15, 135, 255, 0.9)),
                 linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
                 linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
                 linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
