@@ -81,12 +81,25 @@ st.write(
     "calculate, and explain the appropriate analysis."
 )
 
-research_question = st.text_area(
+research_question_input = st.text_area(
     "Research question",
     placeholder="Example: Does teaching method affect exam score?",
     height=100,
     key="research_question_input",
 )
+
+if st.button(
+    "Enter Question",
+    type="primary",
+    key="enter_research_question",
+):
+    if research_question_input.strip():
+        st.session_state["research_question"] = research_question_input.strip()
+        st.success("Question entered. Upload your dataset to begin the analysis.")
+    else:
+        st.warning("Write a research question first.")
+
+research_question = st.session_state.get("research_question", "")
 
 uploaded_file = st.file_uploader(
     "Upload your dataset",
