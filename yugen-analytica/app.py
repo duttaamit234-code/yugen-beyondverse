@@ -50,6 +50,7 @@ from src.visualization import (
 from src.question_engine import interpret_question
 from src.ocr_table import extract_table_from_image
 from src.ocr_accuracy import calculate_ocr_accuracy
+from src.pdf_detector import detect_pdf, extract_pdf_tables
 
 from src.decision_engine import (
     recommend_analyses,
@@ -119,7 +120,7 @@ with st.expander("Evaluate OCR accuracy"):
 
 uploaded_file = st.file_uploader(
     "Upload your dataset",
-    type=["csv", "xlsx", "xls", "png", "jpg", "jpeg"],
+    type=["csv", "xlsx", "xls", "png", "jpg", "jpeg", "pdf"],
     help="CSV/Excel files are loaded directly. PNG/JPG images are converted into an editable table using OCR before analysis.",
 )
 
@@ -129,7 +130,54 @@ if uploaded_file is not None:
     try:
         uploaded_extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
 
-        if uploaded_extension in {"png", "jpg", "jpeg"}:
+        if uploaded_extension == "pdf":
+            pdf_info = detect_pdf(uploaded_file)
+
+            st.write("### PDF Detection")
+            st.dataframe(
+                pd.DataFrame(pdf_info["Page Details"]),
+                use_container_width=True,
+                hide_index=True,
+            )
+
+            if pdf_info["Document Type"] == "scanned_pdf":
+                st.warning(
+                    "This PDF appears to be scanned or image-only. "
+                    "Direct table extraction is not available for this PDF yet. "
+                    "Use the PNG/JPG OCR upload path for scanned pages."
+                )
+                st.stop()
+
+            pdf_tables = extract_pdf_tables(uploaded_file)
+
+            if not pdf_tables:
+                st.warning(
+                    "PDF text was detected, but no reliable table was detected. "
+                    "Please convert the relevant table page to PNG/JPG for OCR."
+                )
+                st.stop()
+
+            df = pd.concat(pdf_tables, ignore_index=True)
+            df = df.drop(columns=["__PDF_Page", "__PDF_Table"], errors="ignore")
+
+            st.success(
+                f"Detected {len(pdf_tables)} table(s) across "
+                f"{pdf_info['Pages']} page(s)."
+            )
+
+            st.write("### PDF Table Review")
+            st.caption(
+                "Review the extracted PDF table before statistical analysis."
+            )
+
+            df = st.data_editor(
+                df,
+                use_container_width=True,
+                num_rows="dynamic",
+                key="pdf_table_editor",
+            ).copy()
+
+        elif uploaded_extension in {"png", "jpg", "jpeg"}:
             st.info(
                 "Image detected. StatsYuri is extracting the table with OCR. "
                 "Review the extracted table before using statistical analysis."
