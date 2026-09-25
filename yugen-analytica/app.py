@@ -842,6 +842,19 @@ if uploaded_file is not None or embedded_text_df is not None:
                 for assumption in question_plan.get("assumptions", []):
                     st.write(f"- {assumption}")
 
+            if question_plan.get("analysis_justification"):
+                st.write("### Why this analysis")
+                st.write(question_plan["analysis_justification"])
+
+            if question_plan.get("estimand"):
+                st.write("### Primary Quantity of Interest")
+                st.write(question_plan["estimand"])
+
+            if question_plan.get("data_validation"):
+                st.write("### Data Validation")
+                for item in question_plan["data_validation"]:
+                    st.write(f"- {item}")
+
             if question_result["matched_columns"]:
                 matched_table = pd.DataFrame(
                     [
@@ -859,6 +872,16 @@ if uploaded_file is not None or embedded_text_df is not None:
                     use_container_width=True,
                     hide_index=True,
                 )
+
+            if question_plan.get("evidence_to_report"):
+                st.write("### Evidence to Report")
+                for item in question_plan["evidence_to_report"]:
+                    st.write(f"- {item}")
+
+            if question_plan.get("interpretation_guardrails"):
+                st.write("### Interpretation Notes")
+                for item in question_plan["interpretation_guardrails"]:
+                    st.write(f"- {item}")
 
             if question_result["candidates"]:
                 st.write("### Candidate Analysis")
