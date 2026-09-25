@@ -119,20 +119,60 @@ if run_analysis:
 
         if embedded_text_df is None:
             st.write("### Statistical Plan")
+            plan = text_only_result.get("plan", {})
+            candidates = text_only_result.get("candidates", [])
+
             st.write(
                 f"**Detected problem:** "
                 f"{text_only_result.get('problem_type', 'Statistical problem')}"
             )
-            st.write(
-                f"**Required analysis:** "
-                f"{text_only_result['candidates'][0]['analysis']}"
-                if text_only_result.get("candidates")
-                else "**Required analysis:** More information is needed"
-            )
-            st.write(f"**Reason:** {text_only_result['reason']}")
+
+            if candidates:
+                st.write(f"**Required analysis:** {candidates[0]['analysis']}")
+                st.write(f"**Significance level:** α = {plan.get('alpha', 0.05):.3f}")
+
+                st.write("#### Research Objective")
+                st.write(plan.get("objective", text_only_result["reason"]))
+
+                st.write("#### Study Design")
+                st.write(plan.get("design", "Undetermined"))
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    st.write("**Response / Outcome**")
+                    st.write(plan.get("response") or "To be identified from data")
+                with col2:
+                    st.write("**Factor / Predictor**")
+                    st.write(plan.get("factor") or "To be identified from data")
+
+                st.write("#### Hypotheses")
+                for hypothesis in plan.get("hypotheses", []):
+                    st.write(f"- {hypothesis}")
+
+                st.write("#### Assumptions to Check")
+                for assumption in plan.get("assumptions", []):
+                    st.write(f"- {assumption}")
+
+                st.write("#### Decision Rule")
+                st.write(plan.get("decision_rule", "Compare the p-value with α."))
+
+                if plan.get("effect_size"):
+                    st.write(f"**Effect size:** {plan['effect_size']}")
+
+                st.write("#### Follow-up Analysis")
+                for item in plan.get("follow_up", []):
+                    st.write(f"- {item}")
+
+                st.write("#### Data Required")
+                st.write(plan.get("data_needed", "Compatible observations for the selected design."))
+            else:
+                st.warning("More information is needed to select a defensible analysis.")
+                st.write(text_only_result["reason"])
+
             st.caption(
-                "No dataset is required to determine the statistical method. "
-                "Upload or include tabular data when you want StatsYuri to calculate the result."
+                "This is the statistical plan. No numerical dataset is required to "
+                "construct the plan. When data are available, StatsYuri validates "
+                "the design and performs the calculation."
             )
     else:
         st.warning("Describe the statistical problem before analyzing.")
