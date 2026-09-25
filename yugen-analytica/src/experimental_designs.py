@@ -148,6 +148,102 @@ def detect_experimental_design(problem):
     return matches[0]
 
 
+
+def extract_experimental_entities(problem):
+    """Extract explicit response, treatment, block, levels, and replication cues."""
+    text = str(problem).strip()
+    lower = _norm(text)
+
+    def first_match(patterns):
+        for pattern in patterns:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match:
+                return match.group(1).strip(" .,:;")
+        return None
+
+    response = first_match([
+        r"(?:effect|effects|impact|influence).*?on\s+(?:the\s+)?([A-Za-z][A-Za-z ]+?)(?:\.|,|\s+at\s+the\s+|$)",
+        r"(?:determine|measure|record|observe|compare).*?(?:on|for|of)\s+(?:the\s+)?([A-Za-z][A-Za-z ]+?)(?:\.|,|\s+at\s+the\s+|$)",
+        r"(?:response|outcome|dependent variable)\s+(?:was|is|of)\s+([A-Za-z][A-Za-z ]+?)(?:\.|,|$)",
+    ])
+
+    treatment = first_match([
+        r"(?:effects?|effectiveness)\s+of\s+(?:different\s+|various\s+|the\s+)?([A-Za-z][A-Za-z ]+?)\s+on",
+        r"(?:compare|comparing)\s+(?:the\s+)?(?:effects?\s+of\s+)?(?:different\s+|various\s+)?([A-Za-z][A-Za-z ]+?)\s+(?:on|for)",
+        r"(?:treatments?|treatment factor)\s*(?:were|was|are|is)?\s*([A-Za-z][A-Za-z ]+?)(?:\.|,|\s+were|\s+was|\s+at\s+the\s+|$)",
+    ])
+
+    block = first_match([
+        r"(?:using|with|across)\s+(?:\d+\s+)?(?:blocks?|replications?)",
+        r"(?:in|using|with)\s+(?:a\s+)?randomi[sz]ed(?:\s+complete)?\s+block\s+design\s+with\s+(\d+)\s+blocks?",
+    ])
+
+    block_count = None
+    block_match = re.search(r"(\d+)\s+(?:blocks?|replications?|replicates?)", lower)
+    if block_match:
+        block_count = int(block_match.group(1))
+
+    treatment_count = None
+    treatment_match = re.search(
+        r"(\d+)\s+(?:different\s+)?(?:treatments?|fertilizers?|varieties?|methods?|doses?|irrigation\s+levels?|treatment\s+levels?)",
+        lower,
+    )
+    if treatment_match:
+        treatment_count = int(treatment_match.group(1))
+
+    levels = []
+    level_match = re.search(
+        r"(?:using|with|among|between)\s+(.+?)\s+(?:treatments?|methods?|fertilizers?|varieties?)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if level_match:
+        candidate = level_match.group(1).strip(" .,:;")
+        if len(candidate) < 120:
+            levels = [x.strip() for x in re.split(r",|\band\b", candidate, flags=re.IGNORECASE) if x.strip()]
+
+    # More reliable response/factor vocabulary when the narrative uses
+    # standard experimental-science wording.
+    factor_aliases = {
+        "fertilizer": ["fertilizer", "fertilizers"],
+        "variety": ["variety", "varieties", "cultivar", "cultivars"],
+        "teaching method": ["teaching method", "teaching methods"],
+        "irrigation": ["irrigation", "irrigation level", "irrigation levels"],
+        "nitrogen": ["nitrogen", "nitrogen dose", "nitrogen doses"],
+        "dose": ["dose", "doses"],
+        "treatment": ["treatment", "treatments"],
+    }
+    factor_name = None
+    for canonical, aliases in factor_aliases.items():
+        if any(re.search(r"\b" + re.escape(alias) + r"\b", lower) for alias in aliases):
+            factor_name = canonical.title()
+            break
+
+    if factor_name:
+        treatment = factor_name
+
+    response_aliases = {
+        "crop yield": ["crop yield", "yield"],
+        "plant height": ["plant height"],
+        "grain yield": ["grain yield"],
+        "exam score": ["exam score", "examination performance", "examination score"],
+        "weight": ["weight"],
+        "growth": ["growth"],
+    }
+    for canonical, aliases in response_aliases.items():
+        if any(re.search(r"\b" + re.escape(alias) + r"\b", lower) for alias in aliases):
+            response = canonical.title()
+            break
+
+    return {
+        "response": response,
+        "treatment": treatment,
+        "block": "Block" if re.search(r"\bblocks?\b", lower) else None,
+        "treatment_count": treatment_count,
+        "block_count": block_count,
+        "treatment_levels": levels,
+    }
+
 def experimental_design_plan(problem):
     """Return an explainable design-level plan from narrative text."""
     detected = detect_experimental_design(problem)
@@ -155,6 +251,7 @@ def experimental_design_plan(problem):
         return None
 
     design = detected["design"]
+    entities = extract_experimental_entities(problem)
 
     common = {
         "design": design,
@@ -162,9 +259,12 @@ def experimental_design_plan(problem):
         "confidence": detected["confidence"],
         "reason": detected["description"],
         "matched_cues": detected["matched_cues"],
-        "response": "Numerical experimental response",
-        "treatment_factor": "Treatment or treatment factor",
-        "blocking_factor": None,
+        "response": entities["response"] or "Numerical experimental response",
+        "treatment_factor": entities["treatment"] or "Treatment or treatment factor",
+        "blocking_factor": entities["block"],
+        "treatment_count": entities["treatment_count"],
+        "block_count": entities["block_count"],
+        "treatment_levels": entities["treatment_levels"],
         "error_structure": "Determined from the experimental design.",
         "hypotheses": [
             "H₀: The relevant treatment effect(s) are equal/absent.",
@@ -184,7 +284,7 @@ def experimental_design_plan(problem):
 
     if design == "Randomized Block Design":
         common.update({
-            "blocking_factor": "Block",
+            "blocking_factor": entities["block"] or "Block",
             "error_structure": "Treatment is tested against residual variation after accounting for blocks.",
             "hypotheses": [
                 "H₀: All treatment means are equal after accounting for block effects.",
