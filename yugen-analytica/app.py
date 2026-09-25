@@ -822,12 +822,12 @@ if uploaded_file is not None or text_dataset is not None:
 
                     candidate = question_result["candidates"][0]
 
-                    if st.button(
-                        "Answer Research Question",
-                        key="answer_research_question",
-                        type="primary",
-                    ):
-                        analysis_name = candidate["analysis"]
+                    st.success(
+                        "Question understood. StatsYuri will now validate the "
+                        "identified variables and execute the analysis automatically."
+                    )
+
+                    analysis_name = candidate["analysis"]
                         result = None
                         test_name = analysis_name
 
@@ -929,7 +929,7 @@ if uploaded_file is not None or text_dataset is not None:
                             if p_value is not None:
                                 decision = decision_from_result(
                                     p_value,
-                                    alpha=0.05,
+                                    alpha=float(candidate.get("alpha", 0.05)),
                                     test_name=test_name,
                                 )
 
@@ -940,13 +940,14 @@ if uploaded_file is not None or text_dataset is not None:
                                     hide_index=True,
                                 )
 
-                                if p_value < 0.05:
+                                alpha_used = float(candidate.get("alpha", 0.05))
+                                if p_value < alpha_used:
                                     st.success(
-                                        "At α = 0.05, the result is statistically significant."
+                                        f"At α = {alpha_used:.2f}, the result is statistically significant."
                                     )
                                 else:
                                     st.info(
-                                        "At α = 0.05, the result is not statistically significant."
+                                        f"At α = {alpha_used:.2f}, the result is not statistically significant."
                                     )
 
                                 st.caption(
