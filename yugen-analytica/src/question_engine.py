@@ -1043,6 +1043,19 @@ def interpret_question(df=None, question=""):
                 "reason": "The wording indicates a group comparison and the dataset contains a compatible response/factor pair.",
             })
 
+    # Experimental-design language is authoritative. Once a concrete design
+    # such as RBD is detected, do not also generate generic group-comparison
+    # candidates. The design determines the correct model and error structure.
+    detected_design = detect_experimental_design(question)
+    if detected_design.get("design"):
+        candidates = [{
+            "analysis": detected_design["analysis"],
+            "design": detected_design["design"],
+            "alpha": alpha,
+            "reason": detected_design["description"],
+            "confidence": detected_design["confidence"],
+        }]
+
     # Remove duplicate candidate structures.
     unique = []
     seen = set()
