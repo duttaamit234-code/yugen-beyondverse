@@ -1,3 +1,5 @@
+"""StatsYuri statistical core. All public analysis functions are kept in this module."""
+
 import pandas as pd
 from scipy import stats
 from itertools import combinations
