@@ -48,7 +48,7 @@ from src.visualization import (
 )
 
 from src.question_engine import interpret_question
-from src.ocr_table import extract_table_from_image
+from src.ocr_table import extract_table_from_image, extract_tables_from_scanned_pdf
 from src.pdf_detector import detect_pdf, extract_pdf_tables
 
 from src.decision_engine import (
@@ -100,10 +100,60 @@ if uploaded_file is not None:
             if pdf_info["Document Type"] == "scanned_pdf":
                 st.warning(
                     "This PDF appears to be scanned or image-only. "
-                    "Direct table extraction is not available for this PDF yet. "
-                    "Use the PNG/JPG OCR upload path for scanned pages."
+                    "StatsYuri will render its pages and run OCR."
                 )
-                st.stop()
+
+                scanned_results = extract_tables_from_scanned_pdf(uploaded_file)
+
+                valid_results = [
+                    item for item in scanned_results
+                    if item["dataframe"] is not None
+                ]
+
+                if not valid_results:
+                    st.error(
+                        "OCR could not extract a reliable table from the scanned PDF."
+                    )
+                    st.stop()
+
+                st.write("### Scanned PDF OCR Results")
+
+                confidence_table = pd.DataFrame([
+                    {
+                        "Page": item["page"],
+                        "OCR Confidence": f"{item['confidence']:.1f}%",
+                    }
+                    for item in scanned_results
+                ])
+                st.dataframe(
+                    confidence_table,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                df = pd.concat(
+                    [item["dataframe"] for item in valid_results],
+                    ignore_index=True,
+                )
+
+                st.write("### OCR Table Review")
+                st.caption(
+                    "Review and correct the OCR table before analysis."
+                )
+
+                df = st.data_editor(
+                    df.drop(columns=["__PDF_Page"], errors="ignore"),
+                    use_container_width=True,
+                    num_rows="dynamic",
+                    key="scanned_pdf_ocr_editor",
+                ).copy()
+
+                st.success(
+                    f"OCR extracted usable tables from "
+                    f"{len(valid_results)} of {len(scanned_results)} page(s)."
+                )
+
+            elif pdf_info["Document Type"] == "text_pdf":
 
             pdf_tables = extract_pdf_tables(uploaded_file)
 
