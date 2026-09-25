@@ -725,20 +725,10 @@ if uploaded_file is not None or text_dataset is not None:
             research_question.strip(),
         )
 
-        if active_question:
-            question_result = interpret_question(df, active_question)
-
-
-        # Treat the search bar as the analysis command. The dataset and the
-        # natural-language problem are the only inputs required.
-        if research_question.strip():
-            st.session_state["research_question"] = research_question.strip()
-
-
         st.write(
             "Describe what you want to find out in plain language. "
-            "StatsYuri will map the question to the current dataset and "
-            "show its interpretation before any analysis is run."
+            "StatsYuri will map the problem to the current dataset and "
+            "execute the compatible analysis."
         )
 
         if research_question.strip():
