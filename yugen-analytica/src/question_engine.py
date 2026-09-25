@@ -473,6 +473,118 @@ def _build_statistical_plan(question, intent, candidate):
         "data_needed": "Observations matching the variables and study design described in the problem.",
     }
 
+    # Replace generic role descriptions with the variables actually
+    # resolved from the user's natural-language question and dataset.
+    # The language model/parser may describe the problem, but the dataset
+    # mapping is authoritative.
+    response_column = candidate.get("response")
+    grouping_column = candidate.get("grouping")
+    variable_1 = candidate.get("variable_1")
+    variable_2 = candidate.get("variable_2")
+    predictor_column = candidate.get("predictor")
+
+    if response_column:
+        plan["response"] = response_column
+    if grouping_column:
+        plan["factor"] = grouping_column
+    if predictor_column:
+        plan["predictor"] = predictor_column
+    if variable_1:
+        plan["variable_1"] = variable_1
+    if variable_2:
+        plan["variable_2"] = variable_2
+
+    resolved = [
+        value for value in (
+            response_column,
+            grouping_column,
+            predictor_column,
+            variable_1,
+            variable_2,
+        )
+        if value
+    ]
+    if resolved:
+        plan["resolved_variables"] = list(dict.fromkeys(resolved))
+        plan["question_interpretation"] = (
+            f"The question was interpreted using the dataset variables: "
+            f"{', '.join(dict.fromkeys(resolved))}."
+        )
+
+    if analysis == "One-way ANOVA" and grouping_column and response_column:
+        levels = 0
+        if candidate.get("grouping") in getattr(candidate, "_dummy", {}):
+            levels = 0
+        plan.update({
+            "objective": (
+                f"Determine whether mean {response_column} differs across "
+                f"the groups defined by {grouping_column}."
+            ),
+            "design": f"One numerical response ({response_column}) measured across "
+                       f"three or more independent groups defined by {grouping_column}",
+            "response": response_column,
+            "factor": grouping_column,
+        })
+    elif analysis == "Welch two-sample t-test" and grouping_column and response_column:
+        plan.update({
+            "objective": (
+                f"Determine whether mean {response_column} differs between "
+                f"the two groups defined by {grouping_column}."
+            ),
+            "design": f"Two independent groups from {grouping_column}, with "
+                       f"{response_column} as the numerical response",
+            "response": response_column,
+            "factor": grouping_column,
+        })
+    elif analysis == "Pearson correlation" and variable_1 and variable_2:
+        plan.update({
+            "objective": (
+                f"Determine whether {variable_1} and {variable_2} have a "
+                "linear association in the observed data."
+            ),
+            "design": f"Two numerical variables: {variable_1} and {variable_2}",
+            "response": variable_2,
+            "predictor": variable_1,
+        })
+    elif analysis == "Pearson correlation + simple linear regression" and variable_1 and variable_2:
+        plan.update({
+            "objective": (
+                f"Determine whether {variable_1} and {variable_2} are related "
+                "and quantify the linear relationship."
+            ),
+            "design": f"Two numerical variables: {variable_1} and {variable_2}",
+            "response": variable_2,
+            "predictor": variable_1,
+        })
+    elif analysis == "Simple linear regression" and predictor_column and response_column:
+        plan.update({
+            "objective": (
+                f"Estimate how {response_column} changes with {predictor_column} "
+                "and use the fitted relationship for prediction."
+            ),
+            "design": f"{response_column} modeled from numerical predictor {predictor_column}",
+            "response": response_column,
+            "predictor": predictor_column,
+        })
+    elif analysis == "Chi-square test of independence" and variable_1 and variable_2:
+        plan.update({
+            "objective": (
+                f"Determine whether {variable_1} and {variable_2} are "
+                "statistically independent."
+            ),
+            "design": f"Two categorical variables: {variable_1} and {variable_2}",
+            "factor": f"{variable_1} and {variable_2}",
+        })
+    elif analysis == "Paired t-test" and variable_1 and variable_2:
+        plan.update({
+            "objective": (
+                f"Determine whether the mean paired change from {variable_1} "
+                f"to {variable_2} differs from zero."
+            ),
+            "design": f"Paired measurements: {variable_1} and {variable_2}",
+            "response": f"{variable_1} → {variable_2}",
+        })
+
     if analysis == "One-way ANOVA":
         plan.update({
             "objective": "Determine whether the mean numerical outcome differs across the independent groups.",
