@@ -1,0 +1,15 @@
+name: statsyuri_mobile
+description: Offline mobile client for StatsYuri.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  file_picker: ^8.0.7
+
+flutter:
+  uses-material-design: true
