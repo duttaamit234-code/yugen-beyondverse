@@ -835,6 +835,17 @@ if uploaded_file is not None or embedded_text_df is not None:
                 st.write(f"**Design:** {question_plan.get('design')}")
                 st.write(f"**Analysis model:** {question_plan.get('analysis')}")
                 st.write(f"**Treatment factor:** {question_plan.get('treatment_factor') or question_plan.get('factor')}")
+                if question_plan.get("treatment_count"):
+                    st.write(f"**Treatment levels:** {question_plan['treatment_count']}")
+                if question_plan.get("treatment_levels"):
+                    st.write(
+                        "**Named treatment levels:** "
+                        + ", ".join(question_plan["treatment_levels"])
+                    )
+                if question_plan.get("block_count"):
+                    st.write(f"**Blocks / replications:** {question_plan['block_count']}")
+                if question_plan.get("design_details"):
+                    st.write(f"**Design details:** {question_plan['design_details']}")
                 if question_plan.get("blocking_factor"):
                     st.write(f"**Blocking factor:** {question_plan['blocking_factor']}")
                 st.write(f"**Error structure:** {question_plan.get('error_structure')}")
