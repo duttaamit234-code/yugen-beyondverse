@@ -706,7 +706,7 @@ if uploaded_file is not None or embedded_text_df is not None:
                                 )
 
                                 st.write(
-                                    f"**Compare:** F value ({f_calculated:.4f}) 
+                                    f"**Compare:** F value ({f_calculated:.4f}) "
                                     f"{'>' if f_calculated > f_tabulated else '≤'} "
                                     f"Critical F ({f_tabulated:.4f}) at α = {alpha:.2f}."
                                 )
