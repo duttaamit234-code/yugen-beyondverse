@@ -358,18 +358,18 @@ def experimental_design_plan(problem):
         "treatment_levels": entities["treatment_levels"],
         "error_structure": "Determined from the experimental design.",
         "hypotheses": [
-            "H₀: The relevant treatment effect(s) are equal/absent.",
-            "H₁: At least one relevant treatment effect differs/is present.",
+            "H₀: All treatment means are equal.",
+            "H₁: At least one treatment mean is different.",
         ],
         "assumptions": [
-            "Experimental units are independent at the appropriate randomization level.",
-            "Residuals are approximately normal for classical ANOVA inference.",
-            "Residual variance is reasonably homogeneous within the relevant error stratum.",
-            "The randomization and blocking structure described in the problem is correctly represented.",
+            "Observations are independent.",
+            "The ANOVA errors are roughly normal.",
+            "The error variance is roughly the same across treatments.",
+            "The blocks and treatment assignment are correctly set up.",
         ],
         "follow_up": [
-            "Report the treatment means and the confirmed primary test result.",
-            "Do not run an additional statistical test automatically.",
+            "Report the treatment means and the ANOVA result.",
+            "No extra statistical test is run automatically.",
         ],
     }
 
