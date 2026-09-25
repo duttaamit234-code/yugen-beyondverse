@@ -97,7 +97,28 @@ if st.button(
 ):
     if research_question_input.strip():
         st.session_state["research_question"] = research_question_input.strip()
-        st.success("Question entered. Upload your dataset to begin the analysis.")
+
+        # If tabular text has already been pasted, load it immediately so the
+        # question can flow directly into analysis without a second trigger.
+        if st.session_state.get("text_dataset_input", "").strip():
+            try:
+                parsed_text_df = pd.read_csv(
+                    io.StringIO(st.session_state["text_dataset_input"].strip()),
+                    sep=None,
+                    engine="python",
+                )
+                if parsed_text_df.shape[1] < 2:
+                    raise ValueError("At least two columns are required.")
+                st.session_state["text_dataset"] = parsed_text_df
+                st.session_state["text_dataset_error"] = ""
+            except Exception as exc:
+                st.session_state["text_dataset"] = None
+                st.session_state["text_dataset_error"] = str(exc)
+
+        st.success(
+            "Question entered. StatsYuri will analyze it as soon as a dataset "
+            "is available."
+        )
     else:
         st.warning("Write a research question first.")
 
