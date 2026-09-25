@@ -512,9 +512,6 @@ def _build_statistical_plan(question, intent, candidate):
         )
 
     if analysis == "One-way ANOVA" and grouping_column and response_column:
-        levels = 0
-        if candidate.get("grouping") in getattr(candidate, "_dummy", {}):
-            levels = 0
         plan.update({
             "objective": (
                 f"Determine whether mean {response_column} differs across "
