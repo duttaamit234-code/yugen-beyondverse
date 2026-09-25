@@ -141,7 +141,8 @@ def _design_structure_evidence(text):
         "complete_randomization": bool(re.search(
             r"completely randomi[sz]ed|complete randomization|\bcrd\b|"
             r"randomly (?:assigned|allocated|allotted|distributed) (?:to|among|across) "
-            r"(?:the\s+)?(?:treatments?|treatment levels?|groups?|methods?|conditions?|irrigation methods?|fertilizers?|varieties?)|"
+            r"(?:the\s+)?(?:[a-z0-9]+\s+){0,4}"
+            r"(?:treatments?|treatment levels?|groups?|methods?|conditions?|irrigation methods?|fertilizers?|varieties?)|"
             r"(?:treatments?|treatment levels?|methods?|conditions?|groups?) "
             r"(?:were|are|was) randomly (?:assigned|allocated|allotted|distributed)",
             text,
