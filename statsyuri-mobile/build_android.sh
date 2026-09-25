@@ -62,12 +62,6 @@ app.write_text(s)
 
 t = top.read_text()
 if 'id("com.chaquo.python")' not in t:
-    t += '''
-\nplugins {
-    id("com.chaquo.python") version "17.0.0" apply false
-}
-'''
-if 'id("com.chaquo.python")' not in t:
     t = 'plugins {\n    id("com.chaquo.python") version "17.0.0" apply false\n}\n\n' + t
 top.write_text(t)
 
