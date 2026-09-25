@@ -104,6 +104,21 @@ research_question = st.text_area(
     key="analysis_search",
 )
 
+analysis_mode = st.radio(
+    "Analysis mode",
+    [
+        "Efficient: run only the confirmed analysis",
+        "Full: show other compatible analyses",
+    ],
+    index=0,
+    key="analysis_mode",
+    help=(
+        "Efficient mode avoids unrelated calculations. It analyzes the "
+        "question, confirms one compatible test, and Solve runs only that "
+        "test. Full mode keeps the broader analysis tools available."
+    ),
+)
+
 run_analysis = st.button(
     "🔍 Analyze",
     type="primary",
@@ -518,6 +533,7 @@ if uploaded_file is not None or embedded_text_df is not None:
             and st.session_state.get("analysis_requested", False)
             and research_question.strip()
             == st.session_state.get("analysis_question", "")
+            and analysis_mode.startswith("Efficient")
         )
 
         if focused_question_mode:
