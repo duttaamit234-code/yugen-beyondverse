@@ -5,3 +5,5 @@ xlrd
 matplotlib
 scipy
 statsmodels
+pillow
+pytesseract
