@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+import matplotlib.pyplot as plt
 
 # StatsYuri web build: keep the statistical modules synchronized with this app.
 # Assumption diagnostics: Shapiro-Wilk and Levene tests are provided by src.statistics.
@@ -34,6 +35,8 @@ from src.statistics import (
     cramers_v,
     tukey_hsd_posthoc,
     kruskal_wallis_test,
+    kruskal_wallis_posthoc,
+    regression_diagnostics,
     multiple_linear_regression,
 )
 
@@ -1233,6 +1236,44 @@ if uploaded_file is not None:
                                 "among the group distributions."
                             )
 
+                        if kw_result["P-Value"] < kw_alpha:
+                            st.write("### Kruskal-Wallis Post-Hoc Comparisons")
+                            st.caption(
+                                "Pairwise Mann-Whitney U tests with Holm correction "
+                                "identify which group pairs differ while controlling "
+                                "the family-wise error rate."
+                            )
+
+                            kw_posthoc = kruskal_wallis_posthoc(
+                                df,
+                                kw_value,
+                                kw_group,
+                                alpha=kw_alpha
+                            )
+
+                            if kw_posthoc is not None:
+                                st.dataframe(
+                                    kw_posthoc.style.format({
+                                        "U-Statistic": "{:.4f}",
+                                        "Raw p-value": lambda value:
+                                            "<0.000001"
+                                            if value < 0.000001
+                                            else f"{value:.6f}",
+                                        "Adjusted p-value": lambda value:
+                                            "<0.000001"
+                                            if value < 0.000001
+                                            else f"{value:.6f}",
+                                    }),
+                                    use_container_width=True,
+                                    hide_index=True
+                                )
+
+                                st.info(
+                                    "Post-hoc comparisons are interpreted only after "
+                                    "the omnibus Kruskal-Wallis test indicates evidence "
+                                    "of differences among groups."
+                                )
+
 
         st.subheader("Regression Analysis")
 
@@ -1405,6 +1446,62 @@ if uploaded_file is not None:
                             "of a linear association between the selected "
                             "variables at the chosen significance level."
                         )
+
+
+
+        if "regression_result" in locals() and regression_result is not None:
+            st.write("### Regression Diagnostics")
+
+            diagnostics = regression_diagnostics(
+                df,
+                regression_y,
+                [regression_x]
+            )
+
+            if diagnostics is not None:
+                diag_table = pd.DataFrame({
+                    "Metric": [
+                        "RMSE",
+                        "MAE",
+                        "Shapiro-Wilk p-value",
+                        "Breusch-Pagan p-value",
+                        "Durbin-Watson",
+                    ],
+                    "Value": [
+                        diagnostics["RMSE"],
+                        diagnostics["MAE"],
+                        diagnostics["Shapiro p-value"],
+                        diagnostics["Breusch-Pagan p-value"],
+                        diagnostics["Durbin-Watson"],
+                    ],
+                })
+
+                st.dataframe(
+                    diag_table.style.format({
+                        "Value": "{:.6f}"
+                    }),
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                fig, ax = plt.subplots()
+                ax.scatter(
+                    diagnostics["Fitted"],
+                    diagnostics["Residuals"]
+                )
+                ax.axhline(0, linestyle="--")
+                ax.set_xlabel("Fitted values")
+                ax.set_ylabel("Residuals")
+                ax.set_title("Residuals vs Fitted Values")
+                st.pyplot(fig)
+                plt.close(fig)
+
+                st.caption(
+                    "Residual diagnostics help assess prediction error and "
+                    "common linear-model assumptions. A small p-value in the "
+                    "Shapiro-Wilk or Breusch-Pagan test indicates evidence "
+                    "against the corresponding assumption."
+                )
 
 
         st.subheader("Correlation Analysis")
@@ -2006,6 +2103,59 @@ if uploaded_file is not None:
                         st.info(
                             "The overall regression model is not statistically "
                             "significant at the selected level."
+                        )
+
+                    st.write("### Regression Diagnostics")
+
+                    mlr_diagnostics = regression_diagnostics(
+                        df,
+                        mlr_response,
+                        mlr_predictors
+                    )
+
+                    if mlr_diagnostics is not None:
+                        mlr_diag_table = pd.DataFrame({
+                            "Metric": [
+                                "RMSE",
+                                "MAE",
+                                "Shapiro-Wilk p-value",
+                                "Breusch-Pagan p-value",
+                                "Durbin-Watson",
+                            ],
+                            "Value": [
+                                mlr_diagnostics["RMSE"],
+                                mlr_diagnostics["MAE"],
+                                mlr_diagnostics["Shapiro p-value"],
+                                mlr_diagnostics["Breusch-Pagan p-value"],
+                                mlr_diagnostics["Durbin-Watson"],
+                            ],
+                        })
+
+                        st.dataframe(
+                            mlr_diag_table.style.format({
+                                "Value": "{:.6f}"
+                            }),
+                            use_container_width=True,
+                            hide_index=True
+                        )
+
+                        fig, ax = plt.subplots()
+                        ax.scatter(
+                            mlr_diagnostics["Fitted"],
+                            mlr_diagnostics["Residuals"]
+                        )
+                        ax.axhline(0, linestyle="--")
+                        ax.set_xlabel("Fitted values")
+                        ax.set_ylabel("Residuals")
+                        ax.set_title("Residuals vs Fitted Values")
+                        st.pyplot(fig)
+                        plt.close(fig)
+
+                        st.caption(
+                            "A residual pattern that is roughly centered around "
+                            "zero without systematic structure is generally more "
+                            "consistent with a linear model. Diagnostic tests "
+                            "provide additional evidence rather than absolute proof."
                         )
 
 
