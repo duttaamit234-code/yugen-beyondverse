@@ -106,22 +106,47 @@ run_analysis = st.button(
     key="run_analysis_search",
 )
 
+embedded_text_df = None
+text_only_result = None
+
 if run_analysis:
     if research_question.strip():
         st.session_state["research_question"] = research_question.strip()
+        text_only_result = interpret_question(None, research_question.strip())
+
+        if text_only_result.get("embedded_data") is not None:
+            embedded_text_df = pd.DataFrame(text_only_result["embedded_data"])
+
+        if embedded_text_df is None:
+            st.write("### Statistical Plan")
+            st.write(
+                f"**Detected problem:** "
+                f"{text_only_result.get('problem_type', 'Statistical problem')}"
+            )
+            st.write(
+                f"**Required analysis:** "
+                f"{text_only_result['candidates'][0]['analysis']}"
+                if text_only_result.get("candidates")
+                else "**Required analysis:** More information is needed"
+            )
+            st.write(f"**Reason:** {text_only_result['reason']}")
+            st.caption(
+                "No dataset is required to determine the statistical method. "
+                "Upload or include tabular data when you want StatsYuri to calculate the result."
+            )
     else:
         st.warning("Describe the statistical problem before analyzing.")
 
 text_dataset = None
 
-if uploaded_file is not None or text_dataset is not None:
+if uploaded_file is not None or embedded_text_df is not None:
 
     try:
         if uploaded_file is None:
-            df = text_dataset.copy()
+            df = embedded_text_df.copy()
             st.success(
-                f"Text dataset loaded successfully: {df.shape[0]} rows × "
-                f"{df.shape[1]} columns."
+                f"Tabular data detected from the problem text: "
+                f"{df.shape[0]} rows × {df.shape[1]} columns."
             )
         else:
             uploaded_extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
