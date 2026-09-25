@@ -1,3 +1,5 @@
+import io
+
 import pandas as pd
 import streamlit as st
 import matplotlib.pyplot as plt
@@ -101,19 +103,65 @@ if st.button(
 
 research_question = st.session_state.get("research_question", "")
 
+st.write("### Or paste your dataset as text")
+st.caption(
+    "Paste CSV, TSV, or delimiter-separated tabular data directly. "
+    "StatsYuri will detect the columns and use the same analysis pipeline."
+)
+
+text_dataset_input = st.text_area(
+    "Paste tabular data",
+    placeholder="Student_ID,Teaching_Method,Study_Hours,Exam_Score\n101,Traditional,2,45\n102,Digital,7,68",
+    height=140,
+    key="text_dataset_input",
+)
+
+if st.button("Use Text Data", key="use_text_dataset"):
+    if text_dataset_input.strip():
+        try:
+            parsed_text_df = pd.read_csv(
+                io.StringIO(text_dataset_input.strip()),
+                sep=None,
+                engine="python",
+            )
+            if parsed_text_df.shape[1] < 2:
+                raise ValueError("At least two columns are required.")
+            st.session_state["text_dataset"] = parsed_text_df
+            st.session_state["text_dataset_error"] = ""
+        except Exception as exc:
+            st.session_state["text_dataset"] = None
+            st.session_state["text_dataset_error"] = str(exc)
+    else:
+        st.session_state["text_dataset"] = None
+        st.session_state["text_dataset_error"] = "Paste some tabular data first."
+
+if st.session_state.get("text_dataset_error"):
+    st.error(
+        f"Could not read the pasted dataset: "
+        f"{st.session_state['text_dataset_error']}"
+    )
+
 uploaded_file = st.file_uploader(
     "Upload your dataset",
     type=["csv", "xlsx", "xls", "png", "jpg", "jpeg", "pdf"],
     help="CSV/Excel files are loaded directly. PNG/JPG images are converted into an editable table using OCR before analysis.",
 )
 
+text_dataset = st.session_state.get("text_dataset")
 
-if uploaded_file is not None:
+if uploaded_file is not None or text_dataset is not None:
 
     try:
-        uploaded_extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
+        if uploaded_file is None:
+            df = text_dataset.copy()
+            st.success(
+                f"Text dataset loaded successfully: {df.shape[0]} rows × "
+                f"{df.shape[1]} columns."
+            )
+        else:
+            uploaded_extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
 
-        if uploaded_extension == "pdf":
+            if uploaded_extension == "pdf":
             pdf_info = detect_pdf(uploaded_file)
 
             st.write("### PDF Detection")
@@ -249,9 +297,9 @@ if uploaded_file is not None:
             else:
                 st.stop()
 
-        else:
-            df = load_dataset(uploaded_file)
-            st.success("Dataset uploaded successfully.")
+            else:
+                df = load_dataset(uploaded_file)
+                st.success("Dataset uploaded successfully.")
 
 
         st.subheader("Dataset Preview")
