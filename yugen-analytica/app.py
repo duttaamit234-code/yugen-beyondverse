@@ -683,19 +683,19 @@ if uploaded_file is not None or embedded_text_df is not None:
                                 )
 
                                 result_table = pd.DataFrame({
-                                    "Confirmed Test": ["Randomized Block ANOVA"],
+                                    "Test": ["Randomized Block ANOVA"],
                                     "Treatment": [str(treatment_column)],
-                                    "F-calculated": [f_calculated],
-                                    "F-tabulated": [f_tabulated],
-                                    "df (treatment)": [int(treatment_df)],
-                                    "df (error)": [int(residual_df)],
+                                    "F value": [f_calculated],
+                                    "Critical F": [f_tabulated],
+                                    "Treatment df": [int(treatment_df)],
+                                    "Error df": [int(residual_df)],
                                     "p-value": [p_value],
                                     "Decision": [decision],
                                 })
                                 st.dataframe(
                                     result_table.style.format({
-                                        "F-calculated": "{:.4f}",
-                                        "F-tabulated": "{:.4f}",
+                                        "F value": "{:.4f}",
+                                        "Critical F": "{:.4f}",
                                         "p-value": lambda value:
                                             "<0.000001"
                                             if value < 0.000001
@@ -706,22 +706,21 @@ if uploaded_file is not None or embedded_text_df is not None:
                                 )
 
                                 st.write(
-                                    f"**Compare:** F-calculated ({f_calculated:.4f}) "
+                                    f"**Compare:** F value ({f_calculated:.4f}) 
                                     f"{'>' if f_calculated > f_tabulated else '≤'} "
-                                    f"F-tabulated ({f_tabulated:.4f}) at α = {alpha:.2f}."
+                                    f"Critical F ({f_tabulated:.4f}) at α = {alpha:.2f}."
                                 )
                                 if p_value < alpha:
                                     st.success(
-                                        "The fertilizer treatment means differ statistically "
-                                        "after accounting for block-to-block variation."
+                                        "The fertilizer means are different. "
+                                        "The block differences were taken into account."
                                     )
                                 else:
                                     st.info(
-                                        "There is not sufficient statistical evidence that the "
-                                        "fertilizer treatment means differ after accounting for blocks."
+                                        "There is not enough evidence that the fertilizer means are different."
                                     )
 
-                                st.write("### Model ANOVA Table")
+                                st.write("### ANOVA Details")
                                 st.dataframe(
                                     anova_table,
                                     use_container_width=True,
