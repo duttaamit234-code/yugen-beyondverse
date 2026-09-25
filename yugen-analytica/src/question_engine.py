@@ -432,6 +432,161 @@ def _problem_type(intent):
     }.get(intent, "Statistical problem")
 
 
+
+def _build_statistical_plan(question, intent, candidate):
+    """Build an explainable statistical plan before numerical calculation."""
+    analysis = candidate.get("analysis", "Statistical analysis")
+    alpha = candidate.get("alpha", _extract_alpha(question))
+
+    plan = {
+        "objective": "Determine the statistical relationship, difference, or effect described in the problem.",
+        "design": _problem_type(intent),
+        "response": "Numerical outcome",
+        "factor": None,
+        "hypotheses": [],
+        "assumptions": [],
+        "effect_size": None,
+        "follow_up": [],
+        "alpha": alpha,
+        "data_needed": "Observations matching the variables and study design described in the problem.",
+    }
+
+    if analysis == "One-way ANOVA":
+        plan.update({
+            "objective": "Determine whether the mean numerical outcome differs across the independent groups.",
+            "design": "One numerical response measured across three or more independent groups",
+            "response": "Numerical outcome",
+            "factor": "Categorical grouping factor with three or more levels",
+            "hypotheses": [
+                "H₀: All population group means are equal.",
+                "H₁: At least one population group mean differs.",
+            ],
+            "assumptions": [
+                "Observations are independent.",
+                "The response is approximately normal within groups, especially for small samples.",
+                "Group variances are reasonably homogeneous for ordinary one-way ANOVA.",
+            ],
+            "effect_size": "Eta-squared (η²).",
+            "follow_up": [
+                "If the omnibus ANOVA is significant, perform a multiple-comparison procedure such as Tukey HSD.",
+                "Report group means and the magnitude of observed differences.",
+            ],
+            "data_needed": "One numerical response value and one group label for each independent observation.",
+        })
+    elif analysis == "Welch two-sample t-test":
+        plan.update({
+            "objective": "Determine whether the mean numerical outcome differs between two independent groups.",
+            "design": "Two independent groups with a numerical response",
+            "factor": "Binary categorical grouping factor",
+            "hypotheses": [
+                "H₀: The two population means are equal.",
+                "H₁: The two population means differ.",
+            ],
+            "assumptions": [
+                "Observations are independent.",
+                "The response is approximately normal within each group, particularly for small samples.",
+                "Welch's test does not require equal population variances.",
+            ],
+            "effect_size": "Cohen's d or another standardized mean-difference measure.",
+            "follow_up": [
+                "Report both group means and the estimated mean difference.",
+                "Interpret significance together with effect size and uncertainty.",
+            ],
+            "data_needed": "One numerical response value and a two-level group label for each independent observation.",
+        })
+    elif analysis == "Pearson correlation":
+        plan.update({
+            "objective": "Determine whether two numerical variables have a statistically significant linear association.",
+            "design": "Observational relationship between two numerical variables",
+            "response": "Two numerical variables",
+            "hypotheses": [
+                "H₀: The population Pearson correlation is zero.",
+                "H₁: The population Pearson correlation is not zero.",
+            ],
+            "assumptions": [
+                "Observations are independent.",
+                "The relationship is approximately linear.",
+                "Extreme outliers should be investigated.",
+            ],
+            "effect_size": "Pearson's r is the standardized measure of linear association.",
+            "follow_up": [
+                "Report the direction and magnitude of r with its p-value.",
+                "Consider simple linear regression when prediction is relevant.",
+            ],
+            "data_needed": "Paired numerical observations for both variables.",
+        })
+    elif analysis == "Simple linear regression":
+        plan.update({
+            "objective": "Estimate or predict a numerical response from a numerical predictor.",
+            "design": "Linear regression with one numerical predictor",
+            "response": "Numerical response variable",
+            "factor": "Numerical predictor",
+            "hypotheses": [
+                "H₀: The population slope is zero.",
+                "H₁: The population slope is not zero.",
+            ],
+            "assumptions": [
+                "Linearity between predictor and response.",
+                "Independent observations.",
+                "Approximately constant residual variance.",
+                "Residual distribution should be checked for inference.",
+            ],
+            "effect_size": "R² describes the proportion of sample response variation explained by the fitted model.",
+            "follow_up": [
+                "Report slope, R², p-value, and confidence interval.",
+                "For prediction, distinguish a mean-response confidence interval from an individual prediction interval.",
+            ],
+            "data_needed": "Paired numerical predictor and response observations.",
+        })
+    elif analysis == "Chi-square test of independence":
+        plan.update({
+            "objective": "Determine whether two categorical variables are statistically independent.",
+            "design": "Cross-tabulation of two categorical variables",
+            "response": "Two categorical variables",
+            "hypotheses": [
+                "H₀: The two categorical variables are independent.",
+                "H₁: The two categorical variables are associated.",
+            ],
+            "assumptions": [
+                "Observations are independent.",
+                "Categories are mutually exclusive and consistently defined.",
+                "Expected cell counts should be adequate for the chi-square approximation.",
+            ],
+            "effect_size": "Cramér's V measures association strength.",
+            "follow_up": [
+                "Inspect the contingency table and expected counts.",
+                "If significant, inspect category patterns contributing to the association.",
+            ],
+            "data_needed": "Two categorical variables recorded for each independent observation.",
+        })
+    elif analysis == "Paired t-test":
+        plan.update({
+            "objective": "Determine whether the mean paired difference between two measurements differs from zero.",
+            "design": "Paired or before/after measurements on the same units",
+            "response": "Two measurements per subject or unit",
+            "hypotheses": [
+                "H₀: The mean paired difference is zero.",
+                "H₁: The mean paired difference is not zero.",
+            ],
+            "assumptions": [
+                "Pairs are correctly matched.",
+                "Paired differences are approximately normal for small samples.",
+                "Different pairs are independent.",
+            ],
+            "effect_size": "A standardized mean difference for paired observations.",
+            "follow_up": [
+                "Report the mean paired change and its confidence interval.",
+                "Consider a non-parametric paired alternative if assumptions are poor.",
+            ],
+            "data_needed": "Two matched measurements from each subject, unit, or condition.",
+        })
+
+    plan["decision_rule"] = (
+        f"Compare the relevant p-value with α = {alpha:.3f}; reject H₀ when p < α."
+    )
+    return plan
+
+
 def interpret_question(df=None, question=""):
     """Turn an ordinary statistical problem into an explainable analysis plan.
 
@@ -457,6 +612,20 @@ def interpret_question(df=None, question=""):
         intents = _detect_intents(question)
         intent = intents[0][0] if intents else None
         candidates = _text_only_plan(question)
+        plan = _build_statistical_plan(question, intent, candidates[0]) if candidates else {
+            "objective": "More information is required to select a defensible analysis.",
+            "design": "Undetermined",
+            "response": None,
+            "factor": None,
+            "hypotheses": [],
+            "assumptions": [],
+            "effect_size": None,
+            "follow_up": [],
+            "alpha": _extract_alpha(question),
+            "data_needed": "Describe the outcome, groups, relationship, or prediction target.",
+            "decision_rule": f"Use α = {_extract_alpha(question):.3f} when a test is selected.",
+        }
+
         return {
             "status": "ready" if candidates else "needs_clarification",
             "intent": intent,
@@ -476,6 +645,7 @@ def interpret_question(df=None, question=""):
             ),
             "analysis_requests": _explicit_analysis_request(question),
             "embedded_data": None,
+            "plan": plan,
         }
 
     numeric, categorical = _column_profile(df)
@@ -693,5 +863,21 @@ def interpret_question(df=None, question=""):
         "analysis_requests": explicit_analyses,
         "embedded_data": (
             df.to_dict(orient="records") if embedded_df is not None else None
+        ),
+        "plan": (
+            _build_statistical_plan(question, intent, candidates[0])
+            if candidates else {
+                "objective": reason,
+                "design": _problem_type(intent),
+                "response": None,
+                "factor": None,
+                "hypotheses": [],
+                "assumptions": [],
+                "effect_size": None,
+                "follow_up": [],
+                "alpha": alpha,
+                "data_needed": "Additional information is required.",
+                "decision_rule": f"Use α = {alpha:.3f} when a test is selected.",
+            }
         ),
     }
