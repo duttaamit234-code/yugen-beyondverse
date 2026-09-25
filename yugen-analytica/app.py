@@ -828,10 +828,10 @@ if uploaded_file is not None or text_dataset is not None:
                     )
 
                     analysis_name = candidate["analysis"]
-                        result = None
-                        test_name = analysis_name
+                    result = None
+                    test_name = analysis_name
 
-                        if analysis_name == "Welch two-sample t-test":
+                    if analysis_name == "Welch two-sample t-test":
                             groups = (
                                 df[candidate["grouping"]]
                                 .dropna()
@@ -848,15 +848,15 @@ if uploaded_file is not None or text_dataset is not None:
                                 )
                                 test_name = "Welch two-sample t-test"
 
-                        elif analysis_name == "One-way ANOVA":
-                            result = one_way_anova(
-                                df,
-                                candidate["response"],
-                                candidate["grouping"],
-                            )
-                            test_name = "One-way ANOVA"
+                    elif analysis_name == "One-way ANOVA":
+                        result = one_way_anova(
+                            df,
+                            candidate["response"],
+                            candidate["grouping"],
+                        )
+                        test_name = "One-way ANOVA"
 
-                        elif analysis_name == "Chi-square test of independence":
+                    elif analysis_name == "Chi-square test of independence":
                             result = chi_square_independence(
                                 df,
                                 candidate["variable_1"],
@@ -864,7 +864,7 @@ if uploaded_file is not None or text_dataset is not None:
                             )
                             test_name = "Chi-square test of independence"
 
-                        elif analysis_name == "Pearson correlation + simple linear regression":
+                    elif analysis_name == "Pearson correlation + simple linear regression":
                             x = candidate["variable_1"]
                             y = candidate["variable_2"]
                             pair = df[[x, y]].apply(
@@ -888,7 +888,7 @@ if uploaded_file is not None or text_dataset is not None:
                                 }
                             test_name = "Pearson correlation"
 
-                        elif analysis_name == "Simple linear regression":
+                    elif analysis_name == "Simple linear regression":
                             result = simple_linear_regression(
                                 df,
                                 candidate["predictor"],
