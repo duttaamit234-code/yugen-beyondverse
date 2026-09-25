@@ -49,7 +49,6 @@ from src.visualization import (
 
 from src.question_engine import interpret_question
 from src.ocr_table import extract_table_from_image
-from src.ocr_accuracy import calculate_ocr_accuracy
 from src.pdf_detector import detect_pdf, extract_pdf_tables
 
 from src.decision_engine import (
@@ -74,48 +73,6 @@ st.subheader("Statistical Analysis Platform")
 st.write(
     "Upload a dataset to begin exploring and analyzing your data."
 )
-
-
-st.subheader("OCR Accuracy Evaluation")
-
-st.write(
-    "Compare OCR output with a known ground-truth table text using "
-    "Levenshtein distance, Character Error Rate (CER), and Word Error Rate (WER)."
-)
-
-with st.expander("Evaluate OCR accuracy"):
-    ground_truth_text = st.text_area(
-        "Ground-truth table text",
-        placeholder="Paste the correct table text here...",
-        key="ocr_ground_truth",
-    )
-
-    ocr_output_text = st.text_area(
-        "Generated OCR output text",
-        placeholder="Paste the OCR-generated text here...",
-        key="ocr_generated_text",
-    )
-
-    if ground_truth_text.strip() and ocr_output_text.strip():
-        ocr_metrics = calculate_ocr_accuracy(
-            ground_truth_text,
-            ocr_output_text,
-        )
-
-        metric_table = pd.DataFrame([{
-            "Character Accuracy": f"{ocr_metrics['Character Accuracy']:.2%}",
-            "Word Accuracy": f"{ocr_metrics['Word Accuracy']:.2%}",
-            "CER": f"{ocr_metrics['CER']:.2%}",
-            "WER": f"{ocr_metrics['WER']:.2%}",
-            "Character Edit Distance": ocr_metrics["Character Edit Distance"],
-            "Word Edit Distance": ocr_metrics["Word Edit Distance"],
-        }])
-
-        st.dataframe(metric_table, use_container_width=True, hide_index=True)
-        st.caption(
-            "CER and WER are calculated against the ground-truth text. "
-            "Lower error rates indicate closer OCR output."
-        )
 
 
 uploaded_file = st.file_uploader(
