@@ -10,6 +10,8 @@ from difflib import SequenceMatcher
 
 import pandas as pd
 
+from src.experimental_designs import experimental_design_plan, detect_experimental_design
+
 
 INTENT_PATTERNS = {
     "paired_comparison": [
@@ -362,6 +364,17 @@ def _text_only_plan(question):
     alpha = _extract_alpha(question)
     candidates = []
 
+    design = detect_experimental_design(question)
+    if design["design"]:
+        candidates.append({
+            "analysis": design["analysis"],
+            "design": design["design"],
+            "alpha": alpha,
+            "reason": design["description"],
+            "confidence": design["confidence"],
+        })
+        return candidates
+
     if any(re.search(pattern, text) for pattern in INTENT_PATTERNS["paired_comparison"]):
         candidates.append({
             "analysis": "Paired t-test",
@@ -437,6 +450,15 @@ def _build_statistical_plan(question, intent, candidate):
     """Build an explainable statistical plan before numerical calculation."""
     analysis = candidate.get("analysis", "Statistical analysis")
     alpha = candidate.get("alpha", _extract_alpha(question))
+
+    design_plan = experimental_design_plan(question)
+    if design_plan:
+        design_plan["alpha"] = alpha
+        design_plan["decision_rule"] = (
+            f"Compare the relevant p-value with α = {alpha:.3f}; "
+            "reject H₀ for a statistically significant effect when p < α."
+        )
+        return design_plan
 
     plan = {
         "objective": "Determine the statistical relationship, difference, or effect described in the problem.",
