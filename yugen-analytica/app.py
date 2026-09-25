@@ -50,6 +50,10 @@ from src.visualization import (
 )
 
 from src.question_engine import interpret_question
+from src.experimental_designs import (
+    detect_experimental_design,
+    run_experimental_design_analysis,
+)
 from src.ocr_table import extract_table_from_image, extract_tables_from_scanned_pdf
 from src.pdf_detector import detect_pdf, extract_pdf_tables
 
@@ -866,7 +870,58 @@ if uploaded_file is not None or embedded_text_df is not None:
                     result = None
                     test_name = analysis_name
 
-                    if analysis_name == "Welch two-sample t-test":
+                    experimental_names = {
+                        "One-way ANOVA for CRD",
+                        "Randomized-block ANOVA",
+                        "Latin-square ANOVA",
+                        "Factorial CRD ANOVA",
+                        "Factorial RBD ANOVA",
+                        "Split-plot ANOVA",
+                        "Split-split-plot ANOVA",
+                        "Strip-plot ANOVA",
+                    }
+
+                    if analysis_name in experimental_names:
+                        design_result = run_experimental_design_analysis(
+                            df,
+                            research_question,
+                        )
+                        result = design_result.get("result")
+                        test_name = analysis_name
+
+                        st.write("### Experimental Design Structure")
+                        st.write(
+                            f"**Design:** {design_result.get('design')}"
+                        )
+
+                        roles = design_result.get("roles", {})
+                        role_rows = [
+                            {"Role": key.replace("_", " ").title(), "Column": value}
+                            for key, value in roles.items()
+                            if value is not None
+                        ]
+                        if role_rows:
+                            st.dataframe(
+                                pd.DataFrame(role_rows),
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+
+                        if design_result.get("error"):
+                            st.error(design_result["error"])
+
+                        if result is not None:
+                            st.write("### Experimental Design ANOVA")
+                            st.dataframe(
+                                result["ANOVA Table"],
+                                use_container_width=True,
+                                hide_index=True,
+                            )
+                            if result.get("Error Structure"):
+                                st.write("### Error Structure")
+                                st.json(result["Error Structure"])
+
+                    elif analysis_name == "Welch two-sample t-test":
                         groups = (
                             df[candidate["grouping"]]
                             .dropna()
