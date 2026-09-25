@@ -95,7 +95,7 @@ st.markdown(
         position: fixed;
         inset: 0;
         pointer-events: none;
-        z-index: -1;
+        z-index: 0;
         background:
             radial-gradient(circle at 18% 35%, rgba(80, 180, 220, 0.07), transparent 22%),
             radial-gradient(circle at 82% 68%, rgba(100, 210, 190, 0.06), transparent 25%);
@@ -112,7 +112,7 @@ st.markdown(
         height: 45vh;
         transform: translateX(-50%);
         pointer-events: none;
-        z-index: -1;
+        z-index: 0;
         opacity: 0.13;
         background-repeat: no-repeat;
         background-position:
@@ -150,12 +150,28 @@ st.markdown(
     }
 
     /* Keep the real Streamlit interface above the decoration. */
-    [data-testid="stAppViewContainer"],
-    [data-testid="stAppViewContainer"] > .main,
-    [data-testid="stAppViewContainer"] .block-container,
-    [data-testid="stHeader"] {
+    /* Studio-style layering: decoration sits between the app background and UI. */
+    [data-testid="stAppViewContainer"] {
         position: relative;
         z-index: 1;
+        background: transparent !important;
+    }
+
+    [data-testid="stAppViewContainer"] > .main {
+        position: relative;
+        z-index: 2;
+        background: transparent !important;
+    }
+
+    [data-testid="stAppViewContainer"] .block-container {
+        position: relative;
+        z-index: 3;
+        background: transparent !important;
+    }
+
+    [data-testid="stHeader"] {
+        position: relative;
+        z-index: 4;
     }
 
     @keyframes statsyuri-chart {
