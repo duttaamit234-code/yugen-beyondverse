@@ -110,6 +110,9 @@ run_analysis = st.button(
     key="run_analysis_search",
 )
 
+if run_analysis:
+    st.session_state["analysis_requested"] = True
+
 embedded_text_df = None
 text_only_result = None
 
@@ -814,7 +817,7 @@ if uploaded_file is not None or embedded_text_df is not None:
                         )
 
 
-        st.subheader("Question-Aware Analysis")
+        st.subheader("One-Click Question-Aware Analysis")
 
         active_question = st.session_state.get(
             "research_question",
@@ -822,12 +825,13 @@ if uploaded_file is not None or embedded_text_df is not None:
         )
 
         st.write(
-            "Describe what you want to find out in plain language. "
-            "StatsYuri will map the problem to the current dataset and "
-            "execute the compatible analysis."
+            "StatsYuri first understands the research problem and experimental "
+            "structure, then validates the available data, selects the compatible "
+            "model, calculates it, applies the decision rule, and explains the "
+            "result. One click runs this complete pipeline."
         )
 
-        if research_question.strip():
+        if research_question.strip() and st.session_state.get("analysis_requested", False):
             question_result = interpret_question(df, research_question)
 
             status = question_result["status"]
