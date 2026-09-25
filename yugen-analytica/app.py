@@ -106,6 +106,12 @@ run_analysis = st.button(
     key="run_analysis_search",
 )
 
+if run_analysis:
+    if research_question.strip():
+        st.session_state["research_question"] = research_question.strip()
+    else:
+        st.warning("Describe the statistical problem before analyzing.")
+
 text_dataset = None
 
 if uploaded_file is not None or text_dataset is not None:
@@ -713,6 +719,15 @@ if uploaded_file is not None or text_dataset is not None:
 
 
         st.subheader("Question-Aware Analysis")
+
+        active_question = st.session_state.get(
+            "research_question",
+            research_question.strip(),
+        )
+
+        if active_question:
+            question_result = interpret_question(df, active_question)
+
 
         # Treat the search bar as the analysis command. The dataset and the
         # natural-language problem are the only inputs required.
