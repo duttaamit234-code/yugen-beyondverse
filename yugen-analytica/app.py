@@ -112,6 +112,7 @@ run_analysis = st.button(
 
 if run_analysis:
     st.session_state["analysis_requested"] = True
+    st.session_state["analysis_question"] = research_question.strip()
     st.session_state["solve_requested"] = False
 
 embedded_text_df = None
@@ -515,6 +516,8 @@ if uploaded_file is not None or embedded_text_df is not None:
         focused_question_mode = bool(
             research_question.strip()
             and st.session_state.get("analysis_requested", False)
+            and research_question.strip()
+            == st.session_state.get("analysis_question", "")
         )
 
         if focused_question_mode:
@@ -595,13 +598,14 @@ if uploaded_file is not None or embedded_text_df is not None:
                     "No other statistical test will be executed for this question."
                 )
 
-                if st.button(
-                    "🧮 Solve",
-                    type="primary",
-                    key="focused_solve_analysis",
-                ):
-                    st.session_state["solve_requested"] = True
-                    st.rerun()
+                if not st.session_state.get("solve_requested", False):
+                    if st.button(
+                        "🧮 Solve",
+                        type="primary",
+                        key="focused_solve_analysis",
+                    ):
+                        st.session_state["solve_requested"] = True
+                        st.rerun()
 
                 if st.session_state.get("solve_requested", False):
                     analysis_name = candidate["analysis"]
