@@ -1,4 +1,4 @@
-package com.yugenbeyondverse.statsyuri
+package com.yugenbeyondverse.statsyuri_mobile
 
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterActivity
