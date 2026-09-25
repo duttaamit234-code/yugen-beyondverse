@@ -77,9 +77,8 @@ st.title("StatsYuri")
 st.subheader("Statistical Analysis Platform")
 
 st.write(
-    "Upload your data and describe the problem. StatsYuri will detect the "
-    "data structure, choose a compatible analysis, calculate it, and explain "
-    "the result."
+    "Upload your data and describe the problem. StatsYuri will understand the "
+    "data and question, choose a compatible analysis, and explain the result."
 )
 
 uploaded_file = st.file_uploader(
