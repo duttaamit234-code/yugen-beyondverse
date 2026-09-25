@@ -855,6 +855,8 @@ if uploaded_file is not None:
                                 )
 
                             p_value = result.get("P-Value")
+                            if p_value is None:
+                                p_value = result.get("Slope P-Value")
 
                             if p_value is not None:
                                 decision = decision_from_result(
