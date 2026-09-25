@@ -48,21 +48,21 @@ def analyze_file(path, question="", mode="efficient"):
     question = str(question or "").strip()
 
     if not question:
-        return {
+        return json.dumps({
             "ok": True,
             "rows": int(df.shape[0]),
             "columns": list(map(str, df.columns)),
             "message": "Dataset loaded. Describe the statistical problem to continue.",
-        }
+        })
 
     plan = interpret_question(df, question)
 
     if not plan.get("candidates"):
-        return {
+        return json.dumps({
             "ok": False,
             "error": plan.get("reason", "More information is needed to select an analysis."),
             "plan": _json_safe(plan),
-        }
+        })
 
     candidate = plan["candidates"][0]
     analysis = candidate.get("analysis", "")
@@ -71,7 +71,7 @@ def analyze_file(path, question="", mode="efficient"):
     # Experimental designs use the same confirmed Python engine as the web app.
     if design:
         result = run_experimental_design_analysis(df, question, design=design)
-        return {
+        return json.dumps({
             "ok": result.get("error") is None,
             "analysis": analysis,
             "design": design,
@@ -79,11 +79,11 @@ def analyze_file(path, question="", mode="efficient"):
             "result": _json_safe(result.get("result")),
             "error": result.get("error"),
             "rows": int(df.shape[0]),
-        }
+        })
 
     # Keep the first mobile build conservative: it exposes the detected plan
     # and dataset metadata while the common non-design executors are wired next.
-    return {
+    return json.dumps({
         "ok": True,
         "analysis": analysis,
         "design": None,
@@ -92,4 +92,4 @@ def analyze_file(path, question="", mode="efficient"):
         "rows": int(df.shape[0]),
         "columns": list(map(str, df.columns)),
         "message": "Analysis plan detected. Numerical execution for this analysis is being connected to the offline mobile engine.",
-    }
+    })
