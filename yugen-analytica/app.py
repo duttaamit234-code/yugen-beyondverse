@@ -112,6 +112,7 @@ run_analysis = st.button(
 
 if run_analysis:
     st.session_state["analysis_requested"] = True
+    st.session_state["solve_requested"] = False
 
 embedded_text_df = None
 text_only_result = None
@@ -942,6 +943,21 @@ if uploaded_file is not None or embedded_text_df is not None:
                 )
 
                 if status == "ready":
+                    st.success(
+                        "StatsYuri understands the problem and has selected a "
+                        "compatible analysis. Review the plan above, then press "
+                        "Solve to run the calculation."
+                    )
+                    solve_clicked = st.button(
+                        "🧮 Solve",
+                        type="primary",
+                        key="solve_analysis",
+                    )
+                    if solve_clicked:
+                        st.session_state["solve_requested"] = True
+                        st.rerun()
+
+                if status == "ready" and st.session_state.get("solve_requested", False):
                     st.caption(
                         "The question engine identifies the analysis. "
                         "StatsYuri then validates the data, calculates the test, "
@@ -951,9 +967,9 @@ if uploaded_file is not None or embedded_text_df is not None:
 
                     candidate = question_result["candidates"][0]
 
-                    st.success(
-                        "Question understood. StatsYuri will now validate the "
-                        "identified variables and execute the analysis automatically."
+                    st.info(
+                        "Solving the understood statistical problem using the "
+                        "validated dataset and selected analysis."
                     )
 
                     analysis_name = candidate["analysis"]
