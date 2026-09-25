@@ -1,0 +1,41 @@
+name: Build StatsYuri Offline APK
+
+on:
+  push:
+    paths:
+      - "statsyuri-mobile/**"
+      - ".github/workflows/statsyuri-mobile-apk.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Build offline APK
+        run: bash statsyuri-mobile/build_android.sh
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StatsYuri-offline-APK
+          path: statsyuri-mobile/dist/StatsYuri-offline.apk
