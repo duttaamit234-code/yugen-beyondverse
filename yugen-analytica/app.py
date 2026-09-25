@@ -72,169 +72,145 @@ st.set_page_config(
     layout="wide",
 )
 
-# Subtle animated statistical background.
-# CSS-only so Streamlit never renders decorative markup as visible text.
+# Animated statistical atmosphere.
+# CSS-only so the decoration stays lightweight, mobile-friendly, and behind the UI.
 st.markdown(
     """
     <style>
-    /* Statistical plotting grid */
     .stApp {
         position: relative;
-        overflow-x: hidden;
         isolation: isolate;
+        overflow-x: hidden;
         background-image:
-            linear-gradient(rgba(120, 190, 210, 0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(120, 190, 210, 0.025) 1px, transparent 1px);
-        background-size: 42px 42px;
+            radial-gradient(circle at 15% 30%, rgba(40, 150, 255, 0.055), transparent 24%),
+            radial-gradient(circle at 85% 70%, rgba(0, 190, 220, 0.045), transparent 25%);
+    }
+
+    /* Floating statistical notation. The symbols drift rather than behaving like a
+       giant chart, so the background feels alive without competing with the app. */
+    .stApp::before,
+    .stApp::after {
+        position: fixed;
+        left: -15vw;
+        width: 130vw;
+        pointer-events: none;
+        z-index: -1;
+        white-space: nowrap;
+        font-family: Georgia, "Times New Roman", serif;
+        font-weight: 600;
+        letter-spacing: 0.9em;
+        line-height: 1;
+        color: rgba(55, 150, 235, 0.16);
+        text-shadow: 0 0 16px rgba(40, 150, 255, 0.12);
+    }
+
+    .stApp::before {
+        content: "Σ   μ   σ   x̄   p   r   β   ∑   π   n   R²   χ²   α   H₀   H₁";
+        top: 24vh;
+        font-size: clamp(22px, 4vw, 48px);
+        transform: rotate(-4deg);
+        animation: statsyuri-symbols-one 18s linear infinite;
+    }
+
+    .stApp::after {
+        content: "∫   √n   z   t   F   E(X)   Var(X)   P(A)   CI   ANOVA   df   Σx";
+        top: 61vh;
+        font-size: clamp(18px, 3.2vw, 38px);
+        color: rgba(0, 175, 205, 0.14);
+        transform: rotate(3deg);
+        animation: statsyuri-symbols-two 24s linear infinite;
+    }
+
+    @keyframes statsyuri-symbols-one {
+        0% {
+            transform: translate3d(-12vw, 0, 0) rotate(-4deg);
+            opacity: 0.25;
+        }
+        50% {
+            transform: translate3d(5vw, -18px, 0) rotate(-2deg);
+            opacity: 0.9;
+        }
+        100% {
+            transform: translate3d(-12vw, 0, 0) rotate(-4deg);
+            opacity: 0.25;
+        }
+    }
+
+    @keyframes statsyuri-symbols-two {
+        0% {
+            transform: translate3d(8vw, 0, 0) rotate(3deg);
+            opacity: 0.2;
+        }
+        50% {
+            transform: translate3d(-7vw, 20px, 0) rotate(1deg);
+            opacity: 0.8;
+        }
+        100% {
+            transform: translate3d(8vw, 0, 0) rotate(3deg);
+            opacity: 0.2;
+        }
+    }
+
+    /* Fine plotting grid underneath the notation. */
+    .stApp {
+        background-image:
+            linear-gradient(rgba(80, 165, 225, 0.035) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(80, 165, 225, 0.035) 1px, transparent 1px),
+            radial-gradient(circle at 15% 30%, rgba(40, 150, 255, 0.055), transparent 24%),
+            radial-gradient(circle at 85% 70%, rgba(0, 190, 220, 0.045), transparent 25%);
+        background-size: 42px 42px, 42px 42px, auto, auto;
         background-position: center top;
     }
 
-    /* Soft moving statistical glow */
-    .stApp::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        pointer-events: none;
-        z-index: 0;
-        background:
-            radial-gradient(circle at 18% 35%, rgba(80, 180, 220, 0.07), transparent 22%),
-            radial-gradient(circle at 82% 68%, rgba(100, 210, 190, 0.06), transparent 25%);
-        animation: statsyuri-glow 12s ease-in-out infinite alternate;
-    }
-
-    /* Faint animated histogram behind the content */
-    .stApp::after {
-        content: "";
-        position: fixed;
-        left: 50%;
-        bottom: -5vh;
-        width: min(1050px, 120vw);
-        height: 45vh;
-        transform: translateX(-50%);
-        pointer-events: none;
-        z-index: 0;
-        opacity: 0.13;
-        background-repeat: no-repeat;
-        background-position:
-            3% 100%, 8% 100%, 13% 100%, 18% 100%, 23% 100%,
-            28% 100%, 33% 100%, 38% 100%, 43% 100%, 48% 100%,
-            53% 100%, 58% 100%, 63% 100%, 68% 100%, 73% 100%,
-            78% 100%, 83% 100%, 88% 100%, 93% 100%;
-        background-size:
-            3% 28%, 3% 54%, 3% 39%, 3% 72%, 3% 46%,
-            3% 84%, 3% 61%, 3% 91%, 3% 49%, 3% 68%,
-            3% 37%, 3% 77%, 3% 57%, 3% 87%, 3% 44%,
-            3% 71%, 3% 52%, 3% 81%, 3% 63%;
-        background-image:
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75)),
-            linear-gradient(to top, rgba(80, 160, 255, 0.18), rgba(80, 215, 195, 0.75));
-        animation: statsyuri-chart 6s ease-in-out infinite alternate;
-        transform-origin: bottom center;
-    }
-
-    /* Keep the real Streamlit interface above the decoration. */
-    /* Studio-style layering: decoration sits between the app background and UI. */
-    [data-testid="stAppViewContainer"] {
-        position: relative;
-        z-index: 1;
-        background: transparent !important;
-    }
-
-    [data-testid="stAppViewContainer"] > .main {
-        position: relative;
-        z-index: 2;
-        background: transparent !important;
-    }
-
-    [data-testid="stAppViewContainer"] .block-container {
-        position: relative;
-        z-index: 3;
-        background: transparent !important;
-    }
-
+    /* Keep the actual Streamlit interface above the decoration. */
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stAppViewContainer"] .block-container,
     [data-testid="stHeader"] {
         position: relative;
-        z-index: 4;
+        z-index: 1;
     }
 
-    @keyframes statsyuri-chart {
-        0% { transform: translateX(-50%) scaleY(0.82); }
-        50% { transform: translateX(-50%) scaleY(1.05); }
-        100% { transform: translateX(-50%) scaleY(0.9); }
-    }
-
-    @keyframes statsyuri-glow {
-        0% { opacity: 0.65; transform: scale(1); }
-        100% { opacity: 1; transform: scale(1.08); }
-    }
-
-    /* Brighter blue treatment for light mode. */
     @media (prefers-color-scheme: light) {
-        .stApp {
-            background-image:
-                linear-gradient(rgba(20, 105, 220, 0.16) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(20, 105, 220, 0.085) 1px, transparent 1px);
-        }
-
         .stApp::before {
-            background:
-                radial-gradient(circle at 18% 35%, rgba(30, 120, 255, 0.30), transparent 24%),
-                radial-gradient(circle at 82% 68%, rgba(0, 165, 235, 0.24), transparent 27%);
+            color: rgba(25, 105, 225, 0.25);
+            text-shadow: 0 0 18px rgba(20, 115, 245, 0.16);
         }
 
         .stApp::after {
-            opacity: 0.72;
+            color: rgba(0, 145, 210, 0.22);
+            text-shadow: 0 0 18px rgba(0, 155, 220, 0.14);
+        }
+
+        .stApp {
             background-image:
-                linear-gradient(to top, rgba(20, 90, 220, 0.48), rgba(15, 125, 255, 1)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72)),
-                linear-gradient(to top, rgba(30, 100, 230, 0.18), rgba(20, 150, 255, 0.72));
+                linear-gradient(rgba(30, 115, 220, 0.065) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(30, 115, 220, 0.065) 1px, transparent 1px),
+                radial-gradient(circle at 15% 30%, rgba(40, 135, 255, 0.08), transparent 25%),
+                radial-gradient(circle at 85% 70%, rgba(0, 170, 230, 0.07), transparent 27%);
         }
     }
 
     @media (max-width: 700px) {
-        .stApp {
-            background-size: 30px 30px;
-        }
+        .stApp::before,
         .stApp::after {
-            height: 30vh;
-            width: 125vw;
-            opacity: 0.09;
+            left: -45vw;
+            width: 190vw;
+            letter-spacing: 0.58em;
         }
+
         .stApp::before {
-            opacity: 0.7;
+            top: 25vh;
+            font-size: 25px;
+        }
+
+        .stApp::after {
+            top: 63vh;
+            font-size: 21px;
+        }
+
+        .stApp {
+            background-size: 30px 30px, 30px 30px, auto, auto;
         }
     }
 
