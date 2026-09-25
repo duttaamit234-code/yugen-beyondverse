@@ -144,10 +144,34 @@ if run_analysis:
                 col1, col2 = st.columns(2)
                 with col1:
                     st.write("**Response / Outcome**")
-                    st.write(plan.get("response") or "To be identified from data")
+                    st.write(
+                        plan.get("response")
+                        or plan.get("outcome")
+                        or "To be identified from data"
+                    )
                 with col2:
                     st.write("**Factor / Predictor**")
-                    st.write(plan.get("factor") or "To be identified from data")
+                    st.write(
+                        plan.get("factor")
+                        or plan.get("treatment_factor")
+                        or "To be identified from data"
+                    )
+
+                if plan.get("blocking_factor"):
+                    st.write("**Blocking Factor**")
+                    st.write(plan["blocking_factor"])
+
+                if plan.get("treatment_count"):
+                    st.write("**Treatment Levels**")
+                    st.write(plan["treatment_count"])
+
+                if plan.get("block_count"):
+                    st.write("**Blocks / Replications**")
+                    st.write(plan["block_count"])
+
+                if plan.get("treatment_levels"):
+                    st.write("**Named Treatment Levels**")
+                    st.write(", ".join(plan["treatment_levels"]))
 
                 st.write("#### Hypotheses")
                 for hypothesis in plan.get("hypotheses", []):
