@@ -11,15 +11,19 @@ from scipy import stats
 
 
 DESIGN_RULES = [
+    # Most specific structures first. Detection is based on experimental
+    # structure, not merely the presence of words such as "randomized".
     {
         "design": "Split-Split Plot Design",
         "patterns": [
             r"split[- ]split[- ]plot",
             r"split[- ]split plot",
-            r"three error strata",
+            r"whole[- ]plot.*subplot.*sub[- ]subplot",
+            r"three.*(?:plot|error).*strata",
         ],
+        "required": 1,
         "analysis": "Split-split-plot ANOVA",
-        "description": "Three-level experimental structure with whole-plot, subplot, and sub-subplot factors.",
+        "description": "Three nested randomization levels: whole-plot, subplot, and sub-subplot factors.",
     },
     {
         "design": "Split-Plot Design",
@@ -27,9 +31,12 @@ DESIGN_RULES = [
             r"split[- ]plot",
             r"main[- ]plot.*subplot",
             r"whole[- ]plot.*subplot",
+            r"(?:large|main|whole)[- ]plots?.*(?:smaller|subplot)",
+            r"one factor.*(?:large|whole|main)[- ]plots?.*another.*(?:subplot|within)",
         ],
+        "required": 1,
         "analysis": "Split-plot ANOVA",
-        "description": "One factor is randomized to whole plots and another within whole plots.",
+        "description": "One factor is randomized to whole plots and another factor is randomized within those whole plots.",
     },
     {
         "design": "Latin Square Design",
@@ -37,87 +44,107 @@ DESIGN_RULES = [
             r"latin square",
             r"each treatment.*once.*row.*column",
             r"each treatment.*once.*row and column",
+            r"every treatment.*once.*row.*column",
+            r"row.*column.*each treatment.*once",
         ],
+        "required": 1,
         "analysis": "Latin-square ANOVA",
-        "description": "Each treatment occurs once in every row and every column.",
-    },
-    {
-        "design": "Randomized Block Design",
-        "patterns": [
-            r"randomized block",
-            r"randomised block",
-            r"randomized complete block",
-            r"randomised complete block",
-            r"each treatment.*every block",
-            r"each treatment.*once.*block",
-        ],
-        "analysis": "Randomized-block ANOVA",
-        "description": "Treatments are randomized within blocks to control block-to-block variation.",
-    },
-    {
-        "design": "Factorial Randomized Block Design",
-        "patterns": [
-            r"factorial.*randomized block",
-            r"factorial.*randomised block",
-            r"factorial.*blocks",
-        ],
-        "analysis": "Factorial RBD ANOVA",
-        "description": "Two or more treatment factors are studied factorially within blocks.",
-    },
-    {
-        "design": "Factorial Completely Randomized Design",
-        "patterns": [
-            r"factorial.*completely randomized",
-            r"factorial.*completely randomised",
-            r"factorial.*crd",
-        ],
-        "analysis": "Factorial CRD ANOVA",
-        "description": "Two or more treatment factors are combined factorially under complete randomization.",
+        "description": "Treatments are arranged so that each treatment occurs once in every row and every column, controlling two blocking directions.",
     },
     {
         "design": "Strip-Plot Design",
         "patterns": [
             r"strip[- ]plot",
-            r"strip plot",
             r"crossed strips",
+            r"two factors.*(?:strips|strip treatments)",
+            r"one factor.*strip.*another factor.*strip",
         ],
+        "required": 1,
         "analysis": "Strip-plot ANOVA",
-        "description": "Two factors are randomized to crossing strips within blocks.",
+        "description": "Two factors are randomized to crossing strips within blocks, producing separate strip error terms.",
+    },
+    {
+        "design": "Factorial Randomized Block Design",
+        "patterns": [
+            r"factorial.*randomi[sz]ed.*block",
+            r"factorial.*randomi[sz]ed complete block",
+            r"factorial.*(?:rcbd|rbd).*block",
+            r"(?:two|three|multiple|several).*factors?.*within.*blocks?",
+            r"factorial.*blocks?.*(?:factor|treatment)",
+        ],
+        "required": 1,
+        "analysis": "Factorial RBD ANOVA",
+        "description": "Two or more treatment factors are studied factorially, with treatment combinations randomized within blocks.",
+    },
+    {
+        "design": "Factorial Completely Randomized Design",
+        "patterns": [
+            r"factorial.*completely randomi[sz]ed",
+            r"factorial.*crd",
+            r"(?:two|three|multiple|several).*factors?.*randomly assigned.*(?:independent|homogeneous)",
+            r"every combination.*(?:randomly assigned|randomized)",
+            r"all combinations.*(?:randomly assigned|randomized)",
+        ],
+        "required": 1,
+        "analysis": "Factorial CRD ANOVA",
+        "description": "Two or more crossed treatment factors are studied under complete randomization without a blocking factor.",
+    },
+    {
+        "design": "Randomized Block Design",
+        "patterns": [
+            r"randomi[sz]ed complete block",
+            r"randomi[sz]ed block design",
+            r"rbd",
+            r"rcbd",
+            r"each treatment.*every block",
+            r"each treatment.*once.*block",
+            r"treatments?.*randomi[sz]ed.*within.*blocks?",
+            r"randomly assigned.*within.*blocks?",
+            r"blocks?.*control.*(?:variation|variability)",
+        ],
+        "required": 1,
+        "analysis": "Randomized-block ANOVA",
+        "description": "A single treatment factor is randomized within blocks to control block-to-block variation.",
     },
     {
         "design": "Completely Randomized Design",
         "patterns": [
-            r"completely randomized",
-            r"completely randomised",
-            r"\bcrd\b",
-            r"randomly assigned.*treatments?",
-            r"randomly assigned.*groups?",
+            r"completely randomi[sz]ed",
+            r"crd",
+            r"experimental units?.*(?:homogeneous|similar).*randomly assigned.*(?:treatments?|treatment levels?)",
+            r"treatments?.*randomly assigned.*(?:independent|homogeneous).*experimental units?",
+            r"randomly assigned.*treatments?.*(?:no blocks?|without blocks?|no blocking|without blocking)",
         ],
+        "required": 1,
         "analysis": "One-way ANOVA for CRD",
-        "description": "Treatments are independently and completely randomized to experimental units.",
+        "description": "A single treatment factor is randomly assigned to otherwise comparable experimental units without blocking.",
     },
 ]
-
 
 def _norm(text):
     return re.sub(r"\s+", " ", str(text).lower().replace("_", " ")).strip()
 
 
 def detect_experimental_design(problem):
-    """Detect an explicit or strongly implied experimental design."""
+    """Detect an experimental design from randomization and error structure cues.
+
+    Generic words such as "randomized" or "groups" are intentionally not
+    sufficient. A design is reported only when the narrative contains a
+    structural cue that distinguishes it from competing designs.
+    """
     text = _norm(problem)
     matches = []
 
     for rule in DESIGN_RULES:
         hits = [pattern for pattern in rule["patterns"] if re.search(pattern, text)]
-        if hits:
+        if len(hits) >= rule.get("required", 1):
             matches.append(
                 {
                     "design": rule["design"],
                     "analysis": rule["analysis"],
                     "description": rule["description"],
                     "matched_cues": hits,
-                    "confidence": min(0.99, 0.70 + 0.08 * len(hits)),
+                    "confidence": min(0.99, 0.72 + 0.06 * len(hits)),
                 }
             )
 
@@ -130,23 +157,44 @@ def detect_experimental_design(problem):
             "confidence": 0.0,
         }
 
-    # Prefer the most specific design when multiple rules match.
+    # Reject CRD when blocking or nested randomization is explicitly present.
+    structural_text = text
+    if re.search(r"\b(?:block|blocking|row|column|whole[- ]plot|subplot|strip[- ]plot)\b", structural_text):
+        matches = [
+            item for item in matches
+            if item["design"] != "Completely Randomized Design"
+        ] or matches
+
+    # A single-factor RBD must not swallow an explicitly factorial design.
+    if re.search(r"\b(?:factorial|two|three|multiple|several)\s+factors?\b", structural_text):
+        factorial = [
+            item for item in matches
+            if "Factorial" in item["design"]
+        ]
+        if factorial:
+            matches = factorial
+
+    # Nested/strip structures are more specific than ordinary block designs.
+    specific_names = {
+        "Split-Split Plot Design",
+        "Split-Plot Design",
+        "Latin Square Design",
+        "Strip-Plot Design",
+    }
+    specific = [item for item in matches if item["design"] in specific_names]
+    if specific:
+        matches = specific
+
+    # Prefer the design with the strongest structural evidence, then the
+    # number of independent matching cues.
     matches.sort(
         key=lambda item: (
-            item["design"] in {
-                "Split-Split Plot Design",
-                "Split-Plot Design",
-                "Latin Square Design",
-                "Strip-Plot Design",
-                "Factorial Randomized Block Design",
-                "Factorial Completely Randomized Design",
-            },
             item["confidence"],
+            len(item["matched_cues"]),
         ),
         reverse=True,
     )
     return matches[0]
-
 
 
 def extract_experimental_entities(problem):
