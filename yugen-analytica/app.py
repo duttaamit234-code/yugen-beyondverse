@@ -824,6 +824,24 @@ if uploaded_file is not None or embedded_text_df is not None:
             st.write(f"**Detected intent:** {question_result['intent'] or 'Not identified'}")
             st.write(f"**Reason:** {question_result['reason']}")
 
+            question_plan = question_result.get("plan", {})
+            if question_plan.get("design") and question_plan.get("design") not in {
+                "Comparison of independent groups",
+                "Two independent groups with a numerical response",
+                "Observational relationship between two numerical variables",
+                "Cross-tabulation of two categorical variables",
+            }:
+                st.write("### Experimental Design Plan")
+                st.write(f"**Design:** {question_plan.get('design')}")
+                st.write(f"**Analysis model:** {question_plan.get('analysis')}")
+                st.write(f"**Treatment factor:** {question_plan.get('treatment_factor') or question_plan.get('factor')}")
+                if question_plan.get("blocking_factor"):
+                    st.write(f"**Blocking factor:** {question_plan['blocking_factor']}")
+                st.write(f"**Error structure:** {question_plan.get('error_structure')}")
+                st.write("**Design assumptions:**")
+                for assumption in question_plan.get("assumptions", []):
+                    st.write(f"- {assumption}")
+
             if question_result["matched_columns"]:
                 matched_table = pd.DataFrame(
                     [
