@@ -191,16 +191,38 @@ def extract_experimental_entities(problem):
     if treatment_match:
         treatment_count = int(treatment_match.group(1))
 
+    # Only report named treatment levels when the sentence explicitly
+    # enumerates them. Generic structural phrases such as "five blocks, each..."
+    # must never become treatment names.
     levels = []
-    level_match = re.search(
-        r"(?:using|with|among|between)\s+(.+?)\s+(?:treatments?|methods?|fertilizers?|varieties?)",
-        text,
-        flags=re.IGNORECASE,
-    )
-    if level_match:
+    explicit_level_patterns = [
+        r"(?:treatments?|methods?|fertilizers?|varieties?)\s+"
+        r"(?:were|are|included|used)\s*[:\-]?\s*(.+?)(?:\.|$)",
+        r"(?:using|with|having)\s+(?:the\s+)?"
+        r"(?:treatments?|methods?|fertilizers?|varieties?)\s*[:\-]\s*(.+?)(?:\.|$)",
+    ]
+    for pattern in explicit_level_patterns:
+        level_match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not level_match:
+            continue
         candidate = level_match.group(1).strip(" .,:;")
-        if len(candidate) < 120:
-            levels = [x.strip() for x in re.split(r",|\band\b", candidate, flags=re.IGNORECASE) if x.strip()]
+        if (
+            len(candidate) < 120
+            and not re.match(
+                r"^(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+"
+                r"(?:blocks?|replications?|replicates?)\b",
+                candidate,
+                flags=re.IGNORECASE,
+            )
+        ):
+            parsed_levels = [
+                item.strip(" .,:;")
+                for item in re.split(r",|\band\b", candidate, flags=re.IGNORECASE)
+                if item.strip(" .,:;")
+            ]
+            if 2 <= len(parsed_levels) <= 12:
+                levels = parsed_levels
+                break
 
     # More reliable response/factor vocabulary when the narrative uses
     # standard experimental-science wording.
