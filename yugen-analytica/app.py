@@ -48,6 +48,7 @@ from src.visualization import (
 )
 
 from src.question_engine import interpret_question
+from src.ocr_table import extract_table_from_image
 
 from src.decision_engine import (
     recommend_analyses,
@@ -75,16 +76,59 @@ st.write(
 
 uploaded_file = st.file_uploader(
     "Upload your dataset",
-    type=["csv", "xlsx", "xls"],
+    type=["csv", "xlsx", "xls", "png", "jpg", "jpeg"],
+    help="CSV/Excel files are loaded directly. PNG/JPG images are converted into an editable table using OCR before analysis.",
 )
 
 
 if uploaded_file is not None:
 
     try:
-        df = load_dataset(uploaded_file)
+        uploaded_extension = uploaded_file.name.rsplit(".", 1)[-1].lower()
 
-        st.success("Dataset uploaded successfully.")
+        if uploaded_extension in {"png", "jpg", "jpeg"}:
+            st.info(
+                "Image detected. StatsYuri is extracting the table with OCR. "
+                "Review the extracted table before using statistical analysis."
+            )
+
+            df, ocr_confidence = extract_table_from_image(uploaded_file)
+
+            st.success(
+                f"OCR table extraction completed. Average OCR confidence: "
+                f"{ocr_confidence:.1f}%"
+            )
+
+            st.write("### OCR Editable Table Review")
+            st.caption(
+                "OCR is not guaranteed to be perfect. Correct any cells or "
+                "column names here before continuing with analysis."
+            )
+
+            edited_df = st.data_editor(
+                df,
+                use_container_width=True,
+                num_rows="dynamic",
+                key="ocr_table_editor",
+            )
+
+            df = edited_df.copy()
+
+            if st.checkbox(
+                "Use OCR table for analysis",
+                value=True,
+                key="ocr_confirmed",
+            ):
+                st.success(
+                    "OCR table accepted. The edited table will be used by "
+                    "the existing StatsYuri analysis pipeline."
+                )
+            else:
+                st.stop()
+
+        else:
+            df = load_dataset(uploaded_file)
+            st.success("Dataset uploaded successfully.")
 
 
         st.subheader("Dataset Preview")
