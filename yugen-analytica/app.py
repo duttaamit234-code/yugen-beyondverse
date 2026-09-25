@@ -73,102 +73,38 @@ st.title("StatsYuri")
 st.subheader("Statistical Analysis Platform")
 
 st.write(
-    "Upload a dataset to begin exploring and analyzing your data."
+    "Upload your data and describe the problem. StatsYuri will detect the "
+    "data structure, choose a compatible analysis, calculate it, and explain "
+    "the result."
 )
-
-st.subheader("What do you want to find out?")
-st.write(
-    "Write your statistical question in plain language. "
-    "StatsYuri will use it after the dataset is uploaded to identify, "
-    "calculate, and explain the appropriate analysis."
-)
-
-research_question_input = st.text_area(
-    "Research question",
-    placeholder="Example: Does teaching method affect exam score?",
-    height=100,
-    key="research_question_input",
-)
-
-if st.button(
-    "Enter Question",
-    type="primary",
-    key="enter_research_question",
-):
-    if research_question_input.strip():
-        st.session_state["research_question"] = research_question_input.strip()
-
-        # If tabular text has already been pasted, load it immediately so the
-        # question can flow directly into analysis without a second trigger.
-        if st.session_state.get("text_dataset_input", "").strip():
-            try:
-                parsed_text_df = pd.read_csv(
-                    io.StringIO(st.session_state["text_dataset_input"].strip()),
-                    sep=None,
-                    engine="python",
-                )
-                if parsed_text_df.shape[1] < 2:
-                    raise ValueError("At least two columns are required.")
-                st.session_state["text_dataset"] = parsed_text_df
-                st.session_state["text_dataset_error"] = ""
-            except Exception as exc:
-                st.session_state["text_dataset"] = None
-                st.session_state["text_dataset_error"] = str(exc)
-
-        st.success(
-            "Question entered. StatsYuri will analyze it as soon as a dataset "
-            "is available."
-        )
-    else:
-        st.warning("Write a research question first.")
-
-research_question = st.session_state.get("research_question", "")
-
-st.write("### Or paste your dataset as text")
-st.caption(
-    "Paste CSV, TSV, or delimiter-separated tabular data directly. "
-    "StatsYuri will detect the columns and use the same analysis pipeline."
-)
-
-text_dataset_input = st.text_area(
-    "Paste tabular data",
-    placeholder="Student_ID,Teaching_Method,Study_Hours,Exam_Score\n101,Traditional,2,45\n102,Digital,7,68",
-    height=140,
-    key="text_dataset_input",
-)
-
-if st.button("Use Text Data", key="use_text_dataset"):
-    if text_dataset_input.strip():
-        try:
-            parsed_text_df = pd.read_csv(
-                io.StringIO(text_dataset_input.strip()),
-                sep=None,
-                engine="python",
-            )
-            if parsed_text_df.shape[1] < 2:
-                raise ValueError("At least two columns are required.")
-            st.session_state["text_dataset"] = parsed_text_df
-            st.session_state["text_dataset_error"] = ""
-        except Exception as exc:
-            st.session_state["text_dataset"] = None
-            st.session_state["text_dataset_error"] = str(exc)
-    else:
-        st.session_state["text_dataset"] = None
-        st.session_state["text_dataset_error"] = "Paste some tabular data first."
-
-if st.session_state.get("text_dataset_error"):
-    st.error(
-        f"Could not read the pasted dataset: "
-        f"{st.session_state['text_dataset_error']}"
-    )
 
 uploaded_file = st.file_uploader(
     "Upload your dataset",
     type=["csv", "xlsx", "xls", "png", "jpg", "jpeg", "pdf"],
-    help="CSV/Excel files are loaded directly. PNG/JPG images are converted into an editable table using OCR before analysis.",
+    help=(
+        "Upload CSV, Excel, PNG/JPG, or PDF data. StatsYuri automatically "
+        "detects the appropriate import pipeline."
+    ),
 )
 
-text_dataset = st.session_state.get("text_dataset")
+st.subheader("🔎 Ask StatsYuri")
+
+research_question = st.text_input(
+    "Statistical problem or research question",
+    placeholder=(
+        "Example: A college wants to determine whether teaching methods "
+        "produce different mean examination scores."
+    ),
+    key="analysis_search",
+)
+
+if research_question.strip():
+    st.caption(
+        "Question detected. Once data is available, StatsYuri will automatically "
+        "interpret the problem and run the compatible analysis."
+    )
+
+text_dataset = None
 
 if uploaded_file is not None or text_dataset is not None:
 
