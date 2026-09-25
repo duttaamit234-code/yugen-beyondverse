@@ -368,8 +368,8 @@ def experimental_design_plan(problem):
             "The randomization and blocking structure described in the problem is correctly represented.",
         ],
         "follow_up": [
-            "If a treatment effect is significant, perform an appropriate multiple-comparison procedure.",
-            "Report treatment means, uncertainty, and an effect-size measure where available.",
+            "Report the treatment means and the confirmed primary test result.",
+            "Do not run an additional statistical test automatically.",
         ],
     }
 
