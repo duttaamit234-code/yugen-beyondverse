@@ -10,3 +10,4 @@ pytesseract
 numpy
 pypdf
 pdfplumber
+pdf2image
