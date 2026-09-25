@@ -160,6 +160,92 @@ def _convert_values(df):
     return df
 
 
+def _group_positions(values):
+    groups = []
+    for value in values:
+        if not groups or value > groups[-1][-1] + 1:
+            groups.append([value])
+        else:
+            groups[-1].append(value)
+    return [int(sum(group) / len(group)) for group in groups]
+
+
+def _detect_grid(image):
+    array = np.array(image)
+    dark = array < 120
+    vertical_strength = dark.sum(axis=0)
+    horizontal_strength = dark.sum(axis=1)
+
+    x_positions = [
+        i for i, value in enumerate(vertical_strength)
+        if value >= image.height * 0.55
+    ]
+    y_positions = [
+        i for i, value in enumerate(horizontal_strength)
+        if value >= image.width * 0.55
+    ]
+
+    x_lines = _group_positions(x_positions)
+    y_lines = _group_positions(y_positions)
+
+    if len(x_lines) >= 3 and len(y_lines) >= 3:
+        return x_lines, y_lines
+    return None, None
+
+
+def _extract_bordered_table(image):
+    x_lines, y_lines = _detect_grid(image)
+    if not x_lines or not y_lines:
+        return None
+
+    rows = []
+    confidences = []
+
+    for row_index in range(len(y_lines) - 1):
+        row = []
+        for column_index in range(len(x_lines) - 1):
+            left = x_lines[column_index] + 4
+            top = y_lines[row_index] + 4
+            right = x_lines[column_index + 1] - 4
+            bottom = y_lines[row_index + 1] - 4
+
+            if right <= left or bottom <= top:
+                row.append("")
+                continue
+
+            cell = image.crop((left, top, right, bottom))
+            result = pytesseract.image_to_data(
+                cell,
+                output_type=Output.DICT,
+                config="--psm 7",
+            )
+
+            pieces = []
+            for text, confidence in zip(result["text"], result["conf"]):
+                text = _clean_text(text)
+                confidence = float(confidence)
+                if text and confidence >= 0:
+                    pieces.append(text)
+                    confidences.append(confidence)
+
+            row.append(_clean_text(" ".join(pieces)))
+        rows.append(row)
+
+    if len(rows) < 2 or len(rows[0]) < 2:
+        return None
+
+    headers = _normalise_headers(rows[0])
+    df = pd.DataFrame(rows[1:], columns=headers)
+    df = df.replace(r"^\s*$", pd.NA, regex=True).dropna(how="all")
+    df = _convert_values(df)
+
+    confidence = (
+        sum(confidences) / len(confidences)
+        if confidences else 0.0
+    )
+    return df.reset_index(drop=True), confidence
+
+
 def extract_table_from_image(uploaded_file):
     """Extract a table-like dataframe from PNG/JPEG input using Tesseract OCR."""
 
