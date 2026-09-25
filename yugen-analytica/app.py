@@ -74,6 +74,19 @@ st.write(
     "Upload a dataset to begin exploring and analyzing your data."
 )
 
+st.subheader("What do you want to find out?")
+st.write(
+    "Write your statistical question in plain language. "
+    "StatsYuri will use it after the dataset is uploaded to identify, "
+    "calculate, and explain the appropriate analysis."
+)
+
+research_question = st.text_area(
+    "Research question",
+    placeholder="Example: Does teaching method affect exam score?",
+    height=100,
+    key="research_question_input",
+)
 
 uploaded_file = st.file_uploader(
     "Upload your dataset",
@@ -685,12 +698,6 @@ if uploaded_file is not None:
             "Describe what you want to find out in plain language. "
             "StatsYuri will map the question to the current dataset and "
             "show its interpretation before any analysis is run."
-        )
-
-        research_question = st.text_input(
-            "Research question",
-            placeholder="Example: Does fertilizer affect crop yield?",
-            key="research_question",
         )
 
         if research_question.strip():
