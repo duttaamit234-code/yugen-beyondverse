@@ -1,6 +1,7 @@
 import re
 from io import BytesIO
 
+import numpy as np
 import pandas as pd
 import pytesseract
 from PIL import Image, ImageOps, ImageEnhance
@@ -163,6 +164,10 @@ def extract_table_from_image(uploaded_file):
     """Extract a table-like dataframe from PNG/JPEG input using Tesseract OCR."""
 
     image = _prepare_image(uploaded_file)
+
+    bordered_result = _extract_bordered_table(image)
+    if bordered_result is not None:
+        return bordered_result
 
     data = pytesseract.image_to_data(
         image,
