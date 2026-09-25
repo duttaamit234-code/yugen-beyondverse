@@ -722,14 +722,27 @@ if uploaded_file is not None or embedded_text_df is not None:
 
                                 st.write("### ANOVA Details")
                                 display_anova = anova_table.copy()
-                                # Hide statsmodels formula syntax from the user.
-                                # Show simple variable names such as Block, Row,
-                                # Column, and Fertilizer.
-                                display_anova["Source"] = (
-                                    display_anova["Source"]
-                                    .astype(str)
-                                    .str.replace(
-                                        r'^C\\(Q\\("([^"]+)"\\)\\)
+                                # Keep internal model syntax out of the user-facing table.
+                                role_labels = {
+                                    "row": "Row",
+                                    "column": "Column",
+                                    "block": "Block",
+                                    "treatment": "Fertilizer",
+                                }
+                                source_text = display_anova["Source"].astype(str)
+                                for role, column_name in design_result["roles"].items():
+                                    if not column_name:
+                                        continue
+                                    label = role_labels.get(role, str(column_name))
+                                    source_text = source_text.str.replace(
+                                        f'C(Q("{column_name}"))',
+                                        label,
+                                        regex=False,
+                                    )
+                                display_anova["Source"] = source_text.replace(
+                                    {"Residual": "Error"}
+                                )
+
                                 st.dataframe(
                                     display_anova,
                                     use_container_width=True,
