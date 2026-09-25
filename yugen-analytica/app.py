@@ -4013,21 +4013,6 @@ if uploaded_file is not None or embedded_text_df is not None:
         st.error(
             f"Unable to process the dataset: {e}"
                     )
-,
-                                        r'\\1',
-                                        regex=True,
-                                    )
-                                    .replace({"Residual": "Error"})
-                                )
-                                st.dataframe(
-                                    display_anova,
-                                    use_container_width=True,
-                                    hide_index=True,
-                                )
-
-            # Stop before Automatic Analysis, Effect Sizes, Chi-Square,
-            # regression, and generic assumption-checking sections.
-            st.stop()
 
         st.subheader("Automatic Analysis")
 
