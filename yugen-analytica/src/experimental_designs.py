@@ -381,6 +381,62 @@ def experimental_design_plan(problem):
     if entities["treatment_levels"]:
         common["treatment_levels"] = entities["treatment_levels"]
 
+    # Translate each detected design into explicit experimental-language
+    # statements. This keeps the plan understandable without requiring the
+    # user to know the design name in advance.
+    language = {
+        "Completely Randomized Design": {
+            "study_design": "Completely Randomized Design (CRD)",
+            "treatment_factor_label": "Treatment factor",
+            "randomization_structure": "Experimental units are treated as comparable and treatment levels are assigned completely at random.",
+            "model_basis": "Treatment differences are compared against common residual error.",
+        },
+        "Randomized Block Design": {
+            "study_design": "Randomized Block Design (RBD)",
+            "treatment_factor_label": "Treatment factor",
+            "randomization_structure": "Treatment levels are randomized within each block, separating block-to-block variation from treatment variation.",
+            "model_basis": "Treatment effects are tested after accounting for systematic block variation.",
+        },
+        "Latin Square Design": {
+            "study_design": "Latin Square Design (LSD)",
+            "treatment_factor_label": "Treatment factor",
+            "randomization_structure": "Each treatment occurs once in every row and once in every column, controlling two blocking directions.",
+            "model_basis": "Treatment effects are estimated after accounting for both row and column effects.",
+        },
+        "Factorial Completely Randomized Design": {
+            "study_design": "Factorial Completely Randomized Design",
+            "treatment_factor_label": "Treatment factors",
+            "randomization_structure": "All combinations of the treatment factors are randomly assigned to comparable experimental units without blocking.",
+            "model_basis": "The model estimates main effects and interactions between treatment factors.",
+        },
+        "Factorial Randomized Block Design": {
+            "study_design": "Factorial Randomized Block Design",
+            "treatment_factor_label": "Treatment factors",
+            "randomization_structure": "All treatment-factor combinations are randomized within blocks.",
+            "model_basis": "Block variation is accounted for while estimating factorial main effects and interactions.",
+        },
+        "Split-Plot Design": {
+            "study_design": "Split-Plot Design",
+            "treatment_factor_label": "Whole-plot factor and subplot factor",
+            "randomization_structure": "One factor is randomized to whole plots and the second factor is randomized within those whole plots.",
+            "model_basis": "The factors use different error strata because they were randomized at different experimental levels.",
+        },
+        "Split-Split Plot Design": {
+            "study_design": "Split-Split-Plot Design",
+            "treatment_factor_label": "Whole-plot, subplot, and sub-subplot factors",
+            "randomization_structure": "Three treatment factors are randomized at three nested experimental levels.",
+            "model_basis": "Each factor and interaction is evaluated against the error stratum created by its randomization level.",
+        },
+        "Strip-Plot Design": {
+            "study_design": "Strip-Plot Design",
+            "treatment_factor_label": "Crossed strip treatment factors",
+            "randomization_structure": "Two treatment factors are assigned to crossing strips within blocks.",
+            "model_basis": "Each strip factor has its own strip-level error and their interaction is assessed separately.",
+        },
+    }.get(design)
+    if language:
+        common.update(language)
+
     if design == "Randomized Block Design":
         common.update({
             "blocking_factor": entities["block"] or "Block",
