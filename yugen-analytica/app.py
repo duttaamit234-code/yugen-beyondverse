@@ -150,7 +150,10 @@ if run_analysis:
                         or "To be identified from data"
                     )
                 with col2:
-                    st.write("**Factor / Predictor**")
+                    if plan.get("treatment_factor") or plan.get("design"):
+                        st.write("**Treatment Factor**")
+                    else:
+                        st.write("**Factor / Predictor**")
                     st.write(
                         plan.get("factor")
                         or plan.get("treatment_factor")
