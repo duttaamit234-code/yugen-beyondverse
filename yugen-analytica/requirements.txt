@@ -8,3 +8,5 @@ statsmodels
 pillow
 pytesseract
 numpy
+pypdf
+pdfplumber
