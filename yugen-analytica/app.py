@@ -89,20 +89,22 @@ uploaded_file = st.file_uploader(
 
 st.subheader("🔎 Ask StatsYuri")
 
-research_question = st.text_input(
-    "Statistical problem or research question",
+research_question = st.text_area(
+    "What do you want to find out?",
     placeholder=(
+        "Describe the statistical problem in ordinary language. "
         "Example: A college wants to determine whether teaching methods "
-        "produce different mean examination scores."
+        "produce different mean examination scores at the 5% significance level."
     ),
+    height=110,
     key="analysis_search",
 )
 
-if research_question.strip():
-    st.caption(
-        "Question detected. Once data is available, StatsYuri will automatically "
-        "interpret the problem and run the compatible analysis."
-    )
+run_analysis = st.button(
+    "🔍 Analyze",
+    type="primary",
+    key="run_analysis_search",
+)
 
 text_dataset = None
 
@@ -711,6 +713,12 @@ if uploaded_file is not None or text_dataset is not None:
 
 
         st.subheader("Question-Aware Analysis")
+
+        # Treat the search bar as the analysis command. The dataset and the
+        # natural-language problem are the only inputs required.
+        if research_question.strip():
+            st.session_state["research_question"] = research_question.strip()
+
 
         st.write(
             "Describe what you want to find out in plain language. "
