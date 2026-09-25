@@ -128,6 +128,7 @@ def _norm(text):
 def _design_structure_evidence(text):
     """Extract structural cues that distinguish DOE designs."""
     return {
+        "has_treatment": bool(re.search(r"\b(?:treatment|treatments|fertilizer|fertilizers|variety|varieties|cultivar|cultivars|method|methods|dose|doses|irrigation|intervention|interventions)\b", text)),
         "has_block": bool(re.search(r"\b(?:block|blocking|replication|replicate|rep)\b", text)),
         "has_row": bool(re.search(r"\brows?\b", text)),
         "has_column": bool(re.search(r"\bcolumns?\b", text)),
@@ -162,16 +163,16 @@ def detect_experimental_design(problem):
     ):
         matches.append(("Latin Square Design", "Latin-square ANOVA",
                         "Each treatment occurs once in every row and every column, controlling two blocking directions.", 0.99))
-    elif evidence["has_factorial"] and evidence["has_block"]:
+    elif evidence["has_factorial"] and evidence["has_block"] and evidence["has_treatment"]:
         matches.append(("Factorial Randomized Block Design", "Factorial RBD ANOVA",
                         "Two or more treatment factors are studied factorially within blocks.", 0.95))
-    elif evidence["has_factorial"] and (evidence["complete_randomization"] or evidence["explicit_no_block"]) and not evidence["has_block"]:
+    elif evidence["has_factorial"] and evidence["has_treatment"] and (evidence["complete_randomization"] or evidence["explicit_no_block"]) and not evidence["has_block"]:
         matches.append(("Factorial Completely Randomized Design", "Factorial CRD ANOVA",
                         "Two or more crossed treatment factors are studied under complete randomization without blocking.", 0.95))
-    elif evidence["has_block"]:
+    elif evidence["has_block"] and evidence["has_treatment"]:
         matches.append(("Randomized Block Design", "Randomized-block ANOVA",
                         "A treatment factor is randomized within blocks to control block-to-block variation.", 0.95))
-    elif evidence["complete_randomization"] or evidence["explicit_no_block"]:
+    elif evidence["has_treatment"] and (evidence["complete_randomization"] or evidence["explicit_no_block"]):
         matches.append(("Completely Randomized Design", "One-way ANOVA for CRD",
                         "A treatment factor is randomly assigned to comparable experimental units without blocking.", 0.95))
 
