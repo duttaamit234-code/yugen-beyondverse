@@ -47,6 +47,8 @@ from src.visualization import (
     create_correlation_heatmap,
 )
 
+from src.question_engine import interpret_question
+
 from src.decision_engine import (
     recommend_analyses,
     summarize_recommendations,
@@ -535,6 +537,77 @@ if uploaded_file is not None:
                             "valid observations to calculate this result."
                         )
 
+
+        st.subheader("Question-Aware Analysis")
+
+        st.write(
+            "Describe what you want to find out in plain language. "
+            "StatsYuri will map the question to the current dataset and "
+            "show its interpretation before any analysis is run."
+        )
+
+        research_question = st.text_input(
+            "Research question",
+            placeholder="Example: Does fertilizer affect crop yield?",
+            key="research_question",
+        )
+
+        if research_question.strip():
+            question_result = interpret_question(df, research_question)
+
+            status = question_result["status"]
+            confidence = question_result["confidence"]
+
+            if status == "ready":
+                st.success(
+                    f"Question mapped successfully. Confidence: {confidence:.0%}"
+                )
+            elif status == "ambiguous":
+                st.warning(
+                    f"More than one interpretation was found. "
+                    f"Confidence: {confidence:.0%}"
+                )
+            else:
+                st.info(
+                    f"More information is needed to map the question. "
+                    f"Confidence: {confidence:.0%}"
+                )
+
+            st.write(f"**Detected intent:** {question_result['intent'] or 'Not identified'}")
+            st.write(f"**Reason:** {question_result['reason']}")
+
+            if question_result["matched_columns"]:
+                matched_table = pd.DataFrame(
+                    [
+                        {
+                            "Column": item["column"],
+                            "Match Score": item["score"],
+                            "Question Evidence": item["evidence"],
+                        }
+                        for item in question_result["matched_columns"]
+                    ]
+                )
+                st.write("### Matched Dataset Columns")
+                st.dataframe(
+                    matched_table,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+            if question_result["candidates"]:
+                st.write("### Candidate Analysis")
+                candidate_table = pd.DataFrame(question_result["candidates"])
+                st.dataframe(
+                    candidate_table,
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                if status == "ready":
+                    st.caption(
+                        "The question engine only interprets the question here. "
+                        "The existing statistical engine remains responsible for "
+                        "validation, assumptions, calculation, and final decisions."
+                    )
 
         st.subheader("Assumption Checking")
 
