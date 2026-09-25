@@ -1,5 +1,6 @@
 import pandas as pd
 from scipy import stats
+from itertools import combinations
 
 
 def _looks_like_identifier(column_name):
@@ -724,6 +725,112 @@ def kruskal_wallis_test(df, value_column, group_column):
         "H-Statistic": statistic,
         "P-Value": p_value,
         "Degrees of Freedom": len(groups) - 1,
+    }
+
+
+def kruskal_wallis_posthoc(df, value_column, group_column, alpha=0.05):
+    """Perform pairwise Mann-Whitney U tests with Holm correction after Kruskal-Wallis."""
+
+    data = df[[value_column, group_column]].dropna().copy()
+    data[value_column] = pd.to_numeric(data[value_column], errors="coerce")
+    data = data.dropna()
+
+    groups = []
+    for label in data[group_column].unique():
+        values = data.loc[data[group_column] == label, value_column]
+        if len(values) >= 2:
+            groups.append((label, values))
+
+    if len(groups) < 3:
+        return None
+
+    comparisons = []
+    for (label1, values1), (label2, values2) in combinations(groups, 2):
+        result = stats.mannwhitneyu(
+            values1,
+            values2,
+            alternative="two-sided"
+        )
+        comparisons.append({
+            "Group 1": label1,
+            "Group 2": label2,
+            "U-Statistic": result.statistic,
+            "Raw p-value": result.pvalue,
+        })
+
+    # Holm step-down correction controls the family-wise error rate.
+    comparisons.sort(key=lambda row: row["Raw p-value"])
+    m = len(comparisons)
+
+    for rank, row in enumerate(comparisons, start=1):
+        row["Adjusted p-value"] = min(
+            1.0,
+            (m - rank + 1) * row["Raw p-value"]
+        )
+
+    # Enforce monotonicity required by the Holm procedure.
+    running_max = 0.0
+    for row in comparisons:
+        running_max = max(running_max, row["Adjusted p-value"])
+        row["Adjusted p-value"] = running_max
+        row["Decision"] = (
+            "Reject H₀"
+            if row["Adjusted p-value"] < alpha
+            else "Fail to reject H₀"
+        )
+
+    return pd.DataFrame(comparisons)
+
+
+def regression_diagnostics(df, response_column, predictor_columns):
+    """Calculate residual diagnostics for a linear regression model."""
+
+    analysis_columns = _analysis_numeric_columns(df)
+
+    if (
+        response_column not in analysis_columns
+        or not predictor_columns
+        or any(column not in analysis_columns for column in predictor_columns)
+    ):
+        return None
+
+    columns = [response_column] + predictor_columns
+    data = df[columns].apply(pd.to_numeric, errors="coerce").dropna()
+
+    if len(data) <= len(predictor_columns) + 1:
+        return None
+
+    import statsmodels.api as sm
+    from statsmodels.stats.diagnostic import het_breuschpagan
+    from statsmodels.stats.stattools import durbin_watson
+
+    x = sm.add_constant(data[predictor_columns], has_constant="add")
+    model = sm.OLS(data[response_column], x).fit()
+
+    residuals = model.resid
+    fitted = model.fittedvalues
+
+    shapiro_stat, shapiro_p = stats.shapiro(residuals)
+    bp_lm, bp_lm_p, _, bp_f_p = het_breuschpagan(residuals, x)
+
+    residual_table = pd.DataFrame({
+        "Fitted": fitted,
+        "Residual": residuals,
+    })
+
+    return {
+        "Observations": len(data),
+        "RMSE": float((residuals.pow(2).mean()) ** 0.5),
+        "MAE": float(residuals.abs().mean()),
+        "Shapiro W": float(shapiro_stat),
+        "Shapiro p-value": float(shapiro_p),
+        "Breusch-Pagan LM": float(bp_lm),
+        "Breusch-Pagan p-value": float(bp_lm_p),
+        "Breusch-Pagan F p-value": float(bp_f_p),
+        "Durbin-Watson": float(durbin_watson(residuals)),
+        "Fitted": fitted,
+        "Residuals": residuals,
+        "Residual Table": residual_table,
     }
 
 
