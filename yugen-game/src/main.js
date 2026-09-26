@@ -20,11 +20,9 @@ const showBootError = (message) => {
 window.addEventListener('error', (event) => {
   showBootError(event.error?.stack || event.message || 'Unknown runtime error');
 });
-
 window.addEventListener('unhandledrejection', (event) => {
   showBootError(event.reason?.stack || event.reason || 'Unhandled promise error');
 });
-
 window.addEventListener('yugen-ready', () => {
   if (boot) boot.style.display = 'none';
 });
@@ -37,10 +35,8 @@ const config = {
   backgroundColor: '#0b1020',
   antialias: true,
   render: { roundPixels: true },
-  input: { activePointers: 3, touch: true },
+  input: { activePointers: 4, touch: true },
   scale: {
-    // Keep a predictable 16:9 landscape game surface. Portrait phones
-    // display the rotate screen instead of squeezing the game into a strip.
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     expandParent: true
@@ -52,48 +48,73 @@ const config = {
   scene: [GameScene, LaterChaptersScene]
 };
 
-let game;
+let game = null;
 window.__yugenTouchVector = { x: 0, y: 0, active: false };
 
-const applyTouchMovement = (scene) => {
-  const input = window.__yugenTouchVector;
-  if (!scene?.player?.body || !input?.active) return;
+/*
+ * GameScene and LaterChaptersScene already contain their own movement loops.
+ * The previous mobile patch replaced buildTouchControls() with an empty
+ * function, but those update loops still read touchState/touch. That made the
+ * first frame reach `undefined.left` and killed the game. Instead of fighting
+ * the scenes, the shared joystick now feeds their existing state variables.
+ */
+const syncLegacyTouchState = (scene) => {
+  const input = window.__yugenTouchVector || { x: 0, y: 0, active: false };
+  const left = input.active && input.x < -0.15;
+  const right = input.active && input.x > 0.15;
+  const up = input.active && input.y < -0.15;
+  const down = input.active && input.y > 0.15;
 
-  if (scene.dialogue?.active || scene.storyLock) {
-    scene.player.body.setVelocity(0, 0);
-    return;
+  if (scene instanceof GameScene) {
+    scene.touchState ??= { left: false, right: false, up: false, down: false };
+    scene.touchState.left = left;
+    scene.touchState.right = right;
+    scene.touchState.up = up;
+    scene.touchState.down = down;
   }
 
-  const speed = scene.playerSpeed ?? scene.speed ?? 190;
-  scene.player.body.setVelocity(input.x * speed, input.y * speed);
+  if (scene instanceof LaterChaptersScene) {
+    scene.touch ??= { left: false, right: false, up: false, down: false };
+    scene.touch.left = left;
+    scene.touch.right = right;
+    scene.touch.up = up;
+    scene.touch.down = down;
+  }
 };
 
 const wrapSceneUpdate = (SceneClass) => {
   const original = SceneClass.prototype.update;
   SceneClass.prototype.update = function (time, delta) {
+    syncLegacyTouchState(this);
     if (typeof original === 'function') original.call(this, time, delta);
-    applyTouchMovement(this);
   };
 };
 
 wrapSceneUpdate(GameScene);
 wrapSceneUpdate(LaterChaptersScene);
 
-// The scene-local controller is intentionally disabled. There is one shared
-// viewport controller so Chapters 1-4 use identical, testable touch input.
-GameScene.prototype.buildTouchControls = function () {};
-LaterChaptersScene.prototype.buildTouchControls = function () {};
+// Disable only the old scene-created button graphics. Their state is still
+// supplied above, so the normal Phaser update/movement code remains intact.
+GameScene.prototype.buildTouchControls = function () {
+  this.touchState = { left: false, right: false, up: false, down: false };
+  this.touchControlObjects = [];
+  this.touchInteractButton = null;
+};
+LaterChaptersScene.prototype.buildTouchControls = function () {
+  this.touch = { left: false, right: false, up: false, down: false };
+  this.touchObjects = [];
+};
 
 const activeScene = () => {
   const scenes = game?.scene?.getScenes?.(true) || [];
-  return scenes.find((scene) => scene && scene.player) || null;
+  return scenes.find((scene) => scene?.player?.body) || null;
 };
 
 const installMobileControls = () => {
   if (document.getElementById('yugen-mobile-controls')) return;
 
-  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
-  const touchCapable = navigator.maxTouchPoints > 0;
+  const coarse = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
+  const touchCapable = (navigator.maxTouchPoints || 0) > 0;
   if (!coarse && !touchCapable) return;
 
   const host = document.getElementById('game') || document.body;
@@ -110,14 +131,12 @@ const installMobileControls = () => {
     <button id="yugen-action-next" class="yugen-action yugen-next" type="button" aria-label="Next dialogue">NEXT</button>
     <div class="yugen-control-hint">DRAG TO MOVE · E INTERACT · NEXT DIALOGUE</div>
   `;
-
   host.appendChild(root);
 
-  const joystick = document.getElementById('yugen-stick-base');
-  const knob = document.getElementById('yugen-stick-knob');
-  const actionE = document.getElementById('yugen-action-e');
-  const actionNext = document.getElementById('yugen-action-next');
-
+  const joystick = root.querySelector('#yugen-stick-base');
+  const knob = root.querySelector('#yugen-stick-knob');
+  const actionE = root.querySelector('#yugen-action-e');
+  const actionNext = root.querySelector('#yugen-action-next');
   let pointerId = null;
   const maxDistance = 44;
 
@@ -125,18 +144,15 @@ const installMobileControls = () => {
     const rect = joystick.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
-
     let dx = clientX - cx;
     let dy = clientY - cy;
     const distance = Math.hypot(dx, dy);
-
-    if (distance > maxDistance) {
+    if (distance > maxDistance && distance > 0) {
       dx = (dx / distance) * maxDistance;
       dy = (dy / distance) * maxDistance;
     }
 
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
-
     const nx = dx / maxDistance;
     const ny = dy / maxDistance;
     const length = Math.hypot(nx, ny);
@@ -146,13 +162,8 @@ const installMobileControls = () => {
       return;
     }
 
-    // Normalize so diagonal travel isn't faster than cardinal travel.
     const scale = Math.min(1, 1 / length);
-    window.__yugenTouchVector = {
-      x: nx * scale,
-      y: ny * scale,
-      active: true
-    };
+    window.__yugenTouchVector = { x: nx * scale, y: ny * scale, active: true };
   };
 
   const reset = () => {
@@ -175,11 +186,11 @@ const installMobileControls = () => {
     setVector(event.clientX, event.clientY);
   }, { passive: false });
 
-  joystick.addEventListener('pointerup', reset);
-  joystick.addEventListener('pointercancel', reset);
-  joystick.addEventListener('lostpointercapture', reset);
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => {
+    joystick.addEventListener(type, reset);
+  });
 
-  const interact = (button, callback) => {
+  const tap = (button, callback) => {
     button.addEventListener('pointerdown', (event) => {
       event.preventDefault();
       event.stopPropagation();
@@ -191,20 +202,18 @@ const installMobileControls = () => {
     });
   };
 
-  interact(actionE, () => activeScene()?.handleInteract?.());
-  interact(actionNext, () => {
+  tap(actionE, () => activeScene()?.handleInteract?.());
+  tap(actionNext, () => {
     const scene = activeScene();
     if (scene?.dialogue?.active) scene.dialogue.advance();
   });
 
-  const syncControls = () => {
-    const portrait = window.innerHeight > window.innerWidth;
-    root.classList.toggle('hidden', portrait);
+  const syncVisibility = () => {
+    root.classList.toggle('hidden', window.innerHeight > window.innerWidth);
   };
-
-  syncControls();
-  window.addEventListener('resize', syncControls, { passive: true });
-  window.addEventListener('orientationchange', syncControls, { passive: true });
+  syncVisibility();
+  window.addEventListener('resize', syncVisibility, { passive: true });
+  window.addEventListener('orientationchange', syncVisibility, { passive: true });
   window.addEventListener('blur', reset);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) reset();
@@ -212,23 +221,12 @@ const installMobileControls = () => {
 };
 
 const refreshOrientation = () => {
-  const portrait = window.innerHeight > window.innerWidth;
-  rotateOverlay?.classList.toggle('visible', portrait);
+  rotateOverlay?.classList.toggle('visible', window.innerHeight > window.innerWidth);
 };
 
 const requestLandscape = async () => {
-  try {
-    await document.documentElement.requestFullscreen?.();
-  } catch {
-    // Fullscreen is optional. The overlay still guides the user to rotate.
-  }
-
-  try {
-    await screen.orientation?.lock?.('landscape');
-  } catch {
-    // Browsers may reject orientation locking unless fullscreen is active.
-  }
-
+  try { await document.documentElement.requestFullscreen?.(); } catch {}
+  try { await screen.orientation?.lock?.('landscape'); } catch {}
   refreshOrientation();
 };
 
@@ -263,18 +261,16 @@ const syncMusicToSave = () => {
 
 ambientAudio.setTheme('village');
 syncMusicToSave();
-setInterval(syncMusicToSave, 700);
+setInterval(syncMusicToSave, 1000);
 
 window.addEventListener('keydown', (event) => {
   if (event.key === 'e' || event.key === 'E' || event.key === ' ') {
     ambientAudio.chime('interact');
   }
 });
-
 window.addEventListener('yugen-audio', (event) => {
   ambientAudio.chime(event.detail?.kind || 'dialogue');
 });
-
 window.addEventListener('yugen-start-chapter2', () => {
   ambientAudio.chime('transition');
   if (!game) return;
