@@ -12,12 +12,14 @@ public class StatsBackgroundView extends View {
     private final String[] symbols = {"Σ", "μ", "σ", "x̄", "p", "r", "χ²", "α", "H₀", "H₁", "F", "R²"};
     private long start;
     private boolean light;
+    private boolean attached;
 
     public StatsBackgroundView(Context context) {
         super(context);
         start = System.currentTimeMillis();
         paint.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD));
         setFocusable(false);
+        setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
     }
 
     public void setLightMode(boolean value) {
@@ -25,10 +27,24 @@ public class StatsBackgroundView extends View {
         invalidate();
     }
 
+    @Override protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        attached = true;
+        start = System.currentTimeMillis();
+        postInvalidateOnAnimation();
+    }
+
+    @Override protected void onDetachedFromWindow() {
+        attached = false;
+        removeCallbacksAndMessages(null);
+        super.onDetachedFromWindow();
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         float w = getWidth();
         float h = getHeight();
+        if (w <= 0f || h <= 0f) return;
         float seconds = (System.currentTimeMillis() - start) / 1000f;
 
         canvas.drawColor(light ? Color.rgb(246, 247, 250) : Color.rgb(8, 11, 17));
@@ -54,6 +70,6 @@ public class StatsBackgroundView extends View {
         float x = -w * .2f + ((seconds * 12f) % (w * 1.2f));
         canvas.drawText(lower, x, h * .78f, paint);
 
-        postInvalidateDelayed(60L);
+        if (attached) postInvalidateOnAnimation();
     }
 }
