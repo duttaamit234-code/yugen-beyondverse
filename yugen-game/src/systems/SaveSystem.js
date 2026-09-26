@@ -10,7 +10,15 @@ export function defaultSave() {
       stoneSeen: false,
       photographFound: false,
       villageShifted: false,
-      oldWomanSecondMet: false
+      oldWomanSecondMet: false,
+      chapter2Started: false,
+      forestEchoSeen: false,
+      shrineFound: false,
+      mirrorSeen: false,
+      mirrorMemorySeen: false,
+      ruinsFound: false,
+      otherYouMet: false,
+      chapter4Complete: false
     },
     player: {
       x: 1595,
