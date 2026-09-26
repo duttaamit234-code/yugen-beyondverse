@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="statsyuri_blue">#4DA3FF</color>
-    <color name="statsyuri_cyan">#8ED8FF</color>
-    <color name="statsyuri_background">#0B0E14</color>
-    <color name="statsyuri_card">#1A1F2C</color>
-    <color name="statsyuri_surface">#242B3D</color>
-    <color name="statsyuri_accent">#C9A9FF</color>
-    <color name="statsyuri_text">#F5F1FF</color>
-    <color name="statsyuri_muted">#AEB7C8</color>
-    <color name="statsyuri_footer">#667083</color>
+    <color name="statsyuri_blue">#356FA8</color>
+    <color name="statsyuri_cyan">#1772A6</color>
+    <color name="statsyuri_background">#F5F7FB</color>
+    <color name="statsyuri_card">#FFFFFF</color>
+    <color name="statsyuri_surface">#EEF1F7</color>
+    <color name="statsyuri_accent">#BFA4F5</color>
+    <color name="statsyuri_text">#151827</color>
+    <color name="statsyuri_muted">#596273</color>
+    <color name="statsyuri_footer">#778196</color>
 </resources>
