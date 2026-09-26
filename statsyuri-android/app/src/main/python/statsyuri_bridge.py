@@ -49,10 +49,19 @@ def _clean(value):
     return value
 
 
+def _looks_like_identifier(column):
+    name = str(column).strip().lower().replace("-", "_").replace(" ", "_")
+    identifier_tokens = ("id", "index", "serial", "code", "roll", "record", "row", "column")
+    return name in identifier_tokens or any(
+        name.startswith(token + "_") or name.endswith("_" + token)
+        for token in identifier_tokens
+    )
+
+
 def _numeric_columns(df):
     return [
         c for c in df.select_dtypes(include="number").columns
-        if not str(c).lower().endswith("_id")
+        if not _looks_like_identifier(c)
     ]
 
 
@@ -61,7 +70,7 @@ def _categorical_columns(df):
     return [
         c for c in df.columns
         if c not in numeric
-        and not str(c).lower().endswith("_id")
+        and not _looks_like_identifier(c)
         and 2 <= df[c].nunique(dropna=True) <= max(20, int(len(df) * 0.5))
     ]
 
@@ -202,7 +211,7 @@ def _execute(df, candidate):
         grouping = candidate.get("grouping")
         if not response or not grouping:
             numeric = _numeric_columns(df)
-            categorical = [c for c in df.columns if c not in numeric and df[c].nunique() >= 3]
+            categorical = [c for c in df.columns if c not in numeric and not _looks_like_identifier(c) and df[c].nunique() >= 3]
             response = response or (numeric[0] if numeric else None)
             grouping = grouping or (categorical[0] if categorical else None)
         if not response or not grouping:
@@ -217,7 +226,7 @@ def _execute(df, candidate):
         grouping = candidate.get("grouping")
         if not response or not grouping:
             numeric = _numeric_columns(df)
-            categorical = [c for c in df.columns if c not in numeric and df[c].nunique() == 2]
+            categorical = [c for c in df.columns if c not in numeric and not _looks_like_identifier(c) and df[c].nunique() == 2]
             response = response or (numeric[0] if numeric else None)
             grouping = grouping or (categorical[0] if categorical else None)
         if not response or not grouping:
@@ -250,7 +259,7 @@ def _execute(df, candidate):
     if analysis == "Chi-square test of independence":
         f1 = candidate.get("variable_1")
         f2 = candidate.get("variable_2")
-        categorical = [c for c in df.columns if df[c].dtype == "object" and df[c].nunique() >= 2]
+        categorical = [c for c in df.columns if df[c].dtype == "object" and not _looks_like_identifier(c) and df[c].nunique() >= 2]
         f1 = f1 or (categorical[0] if categorical else None)
         f2 = f2 or (categorical[1] if len(categorical) > 1 else None)
         if not f1 or not f2:
@@ -290,7 +299,6 @@ def analyze(question, file_path=None, mode="Efficient"):
         interpretation = interpret_question(df, question)
         candidates = interpretation.get("candidates", [])
         selected = candidates[0] if candidates else None
-        # If a written question is ambiguous, still analyze the dataset.
         if df is not None and selected is None:
             selected = _automatic_candidate(df)
             if selected:
