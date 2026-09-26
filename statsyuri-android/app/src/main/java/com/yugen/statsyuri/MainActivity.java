@@ -6,13 +6,11 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
-import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.RadioButton;
 import android.widget.TextView;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.chaquo.python.Python;
@@ -70,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == PICK_FILE && resultCode == RESULT_OK && data != null) {
             selectedUri = data.getData();
             fileName.setText(getFileName(selectedUri));
+            status.setText("Dataset ready. Tap Analyze to inspect it automatically.");
         }
     }
 
@@ -87,13 +86,16 @@ public class MainActivity extends AppCompatActivity {
 
     private void analyze() {
         final String question = questionInput.getText().toString().trim();
-        if (question.isEmpty()) {
-            status.setText("Describe the statistical problem first.");
+        final boolean efficient = ((RadioButton) findViewById(R.id.efficientMode)).isChecked();
+
+        if (question.isEmpty() && selectedUri == null) {
+            status.setText("Select a CSV / Excel dataset, or enter a statistical question.");
             return;
         }
 
-        final boolean efficient = ((RadioButton) findViewById(R.id.efficientMode)).isChecked();
-        status.setText("Analyzing locally…");
+        status.setText(question.isEmpty()
+                ? "Analyzing dataset automatically…"
+                : "Analyzing locally…");
         result.setText("");
 
         executor.execute(() -> {
@@ -134,7 +136,33 @@ public class MainActivity extends AppCompatActivity {
 
     private String pretty(String json) {
         try {
-            return new org.json.JSONObject(json).toString(2);
+            org.json.JSONObject root = new org.json.JSONObject(json);
+            StringBuilder out = new StringBuilder();
+            out.append("ANALYSIS RESULT\n\n");
+            out.append("Analysis: ").append(root.optString("confirmed_analysis", "Not selected")).append("\n");
+            out.append("Rows: ").append(root.optString("rows", "-")).append("\n");
+            out.append("Columns: ").append(root.optJSONArray("columns") == null ? "-" : root.optJSONArray("columns").toString()).append("\n\n");
+            out.append("WHY THIS ANALYSIS\n");
+            out.append(root.optString("reason", "")).append("\n\n");
+
+            org.json.JSONObject execution = root.optJSONObject("execution");
+            if (execution != null) {
+                String calculation = execution.optString("calculation", "");
+                if (!calculation.isEmpty()) {
+                    out.append("CALCULATION\n");
+                    out.append(calculation).append("\n\n");
+                }
+                out.append("RESULT\n");
+                org.json.JSONObject values = execution.optJSONObject("result");
+                if (values != null) {
+                    out.append(values.toString(2));
+                } else {
+                    out.append(execution.toString(2));
+                }
+            } else {
+                out.append("No calculation was produced.");
+            }
+            return out.toString();
         } catch (Exception ignored) {
             return json;
         }
