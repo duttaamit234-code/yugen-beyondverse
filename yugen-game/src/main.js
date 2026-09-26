@@ -6,6 +6,8 @@ import './style.css';
 
 const boot = document.getElementById('boot-message');
 const bootError = document.getElementById('boot-error');
+const rotateOverlay = document.getElementById('rotate-overlay');
+const rotateButton = document.getElementById('rotate-button');
 
 const showBootError = (message) => {
   if (!boot || !bootError) return;
@@ -18,9 +20,11 @@ const showBootError = (message) => {
 window.addEventListener('error', (event) => {
   showBootError(event.error?.stack || event.message || 'Unknown runtime error');
 });
+
 window.addEventListener('unhandledrejection', (event) => {
   showBootError(event.reason?.stack || event.reason || 'Unhandled promise error');
 });
+
 window.addEventListener('yugen-ready', () => {
   if (boot) boot.style.display = 'none';
 });
@@ -35,7 +39,9 @@ const config = {
   render: { roundPixels: true },
   input: { activePointers: 3, touch: true },
   scale: {
-    mode: Phaser.Scale.RESIZE,
+    // Keep a predictable 16:9 landscape game surface. Portrait phones
+    // display the rotate screen instead of squeezing the game into a strip.
+    mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     expandParent: true
   },
@@ -46,54 +52,47 @@ const config = {
   scene: [GameScene, LaterChaptersScene]
 };
 
-/*
- * Mobile controls are installed here rather than relying on scene-local
- * touch flags. The old implementation could draw buttons without ever
- * feeding those flags into the scene's movement update loop.
- *
- * Phaser's pointer system supports multi-touch, and Arcade Physics moves
- * dynamic bodies through their velocity. We bridge the two explicitly.
- */
+let game;
 window.__yugenTouchVector = { x: 0, y: 0, active: false };
-
-const originalGameUpdate = GameScene.prototype.update;
-const originalLaterUpdate = LaterChaptersScene.prototype.update;
 
 const applyTouchMovement = (scene) => {
   const input = window.__yugenTouchVector;
-  if (!scene?.player?.body || !input) return;
+  if (!scene?.player?.body || !input?.active) return;
 
-  const blocked = Boolean(scene.dialogue?.active || scene.storyLock);
-  if (blocked) {
-    if (input.active) scene.player.body.setVelocity(0, 0);
+  if (scene.dialogue?.active || scene.storyLock) {
+    scene.player.body.setVelocity(0, 0);
     return;
   }
 
-  if (input.active) {
-    const speed = scene.playerSpeed ?? scene.speed ?? 190;
-    scene.player.body.setVelocity(input.x * speed, input.y * speed);
-  }
+  const speed = scene.playerSpeed ?? scene.speed ?? 190;
+  scene.player.body.setVelocity(input.x * speed, input.y * speed);
 };
 
-GameScene.prototype.update = function (time, delta) {
-  if (typeof originalGameUpdate === 'function') originalGameUpdate.call(this, time, delta);
-  applyTouchMovement(this);
+const wrapSceneUpdate = (SceneClass) => {
+  const original = SceneClass.prototype.update;
+  SceneClass.prototype.update = function (time, delta) {
+    if (typeof original === 'function') original.call(this, time, delta);
+    applyTouchMovement(this);
+  };
 };
 
-LaterChaptersScene.prototype.update = function (time, delta) {
-  if (typeof originalLaterUpdate === 'function') originalLaterUpdate.call(this, time, delta);
-  applyTouchMovement(this);
-};
+wrapSceneUpdate(GameScene);
+wrapSceneUpdate(LaterChaptersScene);
 
-// Disable the old scene-local buttons. They looked like controls but were
-// not guaranteed to participate in the movement loop. One shared controller
-// below is used by every playable chapter.
+// The scene-local controller is intentionally disabled. There is one shared
+// viewport controller so Chapters 1-4 use identical, testable touch input.
 GameScene.prototype.buildTouchControls = function () {};
 LaterChaptersScene.prototype.buildTouchControls = function () {};
 
+const activeScene = () => {
+  const scenes = game?.scene?.getScenes?.(true) || [];
+  return scenes.find((scene) => scene && scene.player) || null;
+};
+
 const installMobileControls = () => {
   if (document.getElementById('yugen-mobile-controls')) return;
-  const coarse = window.matchMedia?.('(pointer: coarse)').matches;
+
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false;
   const touchCapable = navigator.maxTouchPoints > 0;
   if (!coarse && !touchCapable) return;
 
@@ -102,117 +101,145 @@ const installMobileControls = () => {
 
   const root = document.createElement('div');
   root.id = 'yugen-mobile-controls';
-  root.style.cssText = [
-    'position:absolute','inset:0','z-index:9999','pointer-events:none',
-    'touch-action:none','user-select:none','-webkit-user-select:none'
-  ].join(';');
+  root.innerHTML = `
+    <div id="yugen-stick-base" aria-label="Move joystick">
+      <span class="yugen-stick-label">MOVE</span>
+      <div id="yugen-stick-knob"></div>
+    </div>
+    <button id="yugen-action-e" class="yugen-action" type="button" aria-label="Interact">E</button>
+    <button id="yugen-action-next" class="yugen-action yugen-next" type="button" aria-label="Next dialogue">NEXT</button>
+    <div class="yugen-control-hint">DRAG TO MOVE · E INTERACT · NEXT DIALOGUE</div>
+  `;
 
-  const make = (tag, css, text = '') => {
-    const el = document.createElement(tag);
-    el.textContent = text;
-    el.style.cssText = css;
-    root.appendChild(el);
-    return el;
-  };
+  host.appendChild(root);
 
-  const joystick = make('div', [
-    'position:absolute','left:24px','bottom:24px','width:132px','height:132px',
-    'border-radius:50%','background:rgba(8,12,22,.58)','border:2px solid rgba(220,226,238,.42)',
-    'box-shadow:0 4px 20px rgba(0,0,0,.35)','pointer-events:auto','touch-action:none'
-  ].join(';'));
+  const joystick = document.getElementById('yugen-stick-base');
+  const knob = document.getElementById('yugen-stick-knob');
+  const actionE = document.getElementById('yugen-action-e');
+  const actionNext = document.getElementById('yugen-action-next');
 
-  const ring = make('div', [
-    'position:absolute','left:50%','top:50%','width:68px','height:68px',
-    'margin:-34px','border-radius:50%','background:rgba(42,50,72,.85)',
-    'border:2px solid rgba(238,241,248,.7)','box-shadow:0 2px 8px rgba(0,0,0,.4)',
-    'pointer-events:none'
-  ].join(';'), '');
+  let pointerId = null;
+  const maxDistance = 44;
 
   const setVector = (clientX, clientY) => {
-    const r = joystick.getBoundingClientRect();
-    const cx = r.left + r.width / 2;
-    const cy = r.top + r.height / 2;
-    const max = r.width * 0.36;
+    const rect = joystick.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+
     let dx = clientX - cx;
     let dy = clientY - cy;
-    const len = Math.hypot(dx, dy);
-    if (len > max) { dx = dx / len * max; dy = dy / len * max; }
-    const dead = 8;
-    if (Math.hypot(dx, dy) <= dead) {
+    const distance = Math.hypot(dx, dy);
+
+    if (distance > maxDistance) {
+      dx = (dx / distance) * maxDistance;
+      dy = (dy / distance) * maxDistance;
+    }
+
+    knob.style.transform = `translate(${dx}px, ${dy}px)`;
+
+    const nx = dx / maxDistance;
+    const ny = dy / maxDistance;
+    const length = Math.hypot(nx, ny);
+
+    if (length < 0.16) {
       window.__yugenTouchVector = { x: 0, y: 0, active: false };
-      ring.style.transform = 'translate(-50%, -50%)';
       return;
     }
-    const nx = dx / max;
-    const ny = dy / max;
-    window.__yugenTouchVector = { x: nx, y: ny, active: true };
-    ring.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+
+    // Normalize so diagonal travel isn't faster than cardinal travel.
+    const scale = Math.min(1, 1 / length);
+    window.__yugenTouchVector = {
+      x: nx * scale,
+      y: ny * scale,
+      active: true
+    };
   };
 
-  const resetVector = () => {
+  const reset = () => {
+    pointerId = null;
+    knob.style.transform = 'translate(0, 0)';
     window.__yugenTouchVector = { x: 0, y: 0, active: false };
-    ring.style.transform = 'translate(-50%, -50%)';
   };
 
-  joystick.addEventListener('pointerdown', (e) => {
-    joystick.setPointerCapture?.(e.pointerId);
-    setVector(e.clientX, e.clientY);
-    e.preventDefault();
+  joystick.addEventListener('pointerdown', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    pointerId = event.pointerId;
+    joystick.setPointerCapture?.(pointerId);
+    setVector(event.clientX, event.clientY);
   }, { passive: false });
-  joystick.addEventListener('pointermove', (e) => {
-    if (e.buttons || e.pressure > 0) setVector(e.clientX, e.clientY);
-    e.preventDefault();
+
+  joystick.addEventListener('pointermove', (event) => {
+    if (event.pointerId !== pointerId) return;
+    event.preventDefault();
+    setVector(event.clientX, event.clientY);
   }, { passive: false });
-  ['pointerup','pointercancel','lostpointercapture'].forEach(type => joystick.addEventListener(type, resetVector));
 
-  const buttonBase = [
-    'position:absolute','width:68px','height:68px','border-radius:50%',
-    'border:2px solid rgba(220,226,238,.5)','background:rgba(8,12,22,.72)',
-    'color:#f4f1e8','font:600 17px sans-serif','box-shadow:0 4px 14px rgba(0,0,0,.4)',
-    'pointer-events:auto','touch-action:manipulation','-webkit-tap-highlight-color:transparent'
-  ].join(';');
+  joystick.addEventListener('pointerup', reset);
+  joystick.addEventListener('pointercancel', reset);
+  joystick.addEventListener('lostpointercapture', reset);
 
-  const action = make('button', `${buttonBase};right:28px;bottom:54px`, 'E');
-  const next = make('button', `${buttonBase};right:108px;bottom:126px;width:82px;height:50px;border-radius:18px;font-size:13px`, 'NEXT');
-  const label = make('div', [
-    'position:absolute','left:34px','bottom:166px','color:rgba(245,244,238,.72)',
-    'font:12px sans-serif','letter-spacing:1px','pointer-events:none'
-  ].join(';'), 'DRAG TO MOVE');
-
-  const activeScene = () => {
-    const scenes = game?.scene?.getScenes?.(true) || [];
-    return scenes.find(s => s?.player) || null;
+  const interact = (button, callback) => {
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      button.classList.add('pressed');
+      callback();
+    }, { passive: false });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => {
+      button.addEventListener(type, () => button.classList.remove('pressed'));
+    });
   };
 
-  const tap = (handler) => {
-    const fn = (e) => { e.preventDefault(); e.stopPropagation(); handler(); };
-    return fn;
-  };
-
-  action.addEventListener('pointerdown', tap(() => activeScene()?.handleInteract?.()), { passive: false });
-  next.addEventListener('pointerdown', tap(() => {
+  interact(actionE, () => activeScene()?.handleInteract?.());
+  interact(actionNext, () => {
     const scene = activeScene();
     if (scene?.dialogue?.active) scene.dialogue.advance();
-  }), { passive: false });
+  });
 
-  root.appendChild(joystick);
-  // ring was already appended by make(), so it is intentionally kept as a child of root;
-  // position it over the joystick after the root is attached.
-  host.appendChild(root);
-  joystick.appendChild(ring);
-
-  const updateVisibility = () => {
-    const visible = (window.innerWidth <= 1000) || navigator.maxTouchPoints > 0;
-    root.style.display = visible ? 'block' : 'none';
+  const syncControls = () => {
+    const portrait = window.innerHeight > window.innerWidth;
+    root.classList.toggle('hidden', portrait);
   };
-  updateVisibility();
-  window.addEventListener('resize', updateVisibility, { passive: true });
+
+  syncControls();
+  window.addEventListener('resize', syncControls, { passive: true });
+  window.addEventListener('orientationchange', syncControls, { passive: true });
+  window.addEventListener('blur', reset);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) reset();
+  });
 };
 
-let game;
+const refreshOrientation = () => {
+  const portrait = window.innerHeight > window.innerWidth;
+  rotateOverlay?.classList.toggle('visible', portrait);
+};
+
+const requestLandscape = async () => {
+  try {
+    await document.documentElement.requestFullscreen?.();
+  } catch {
+    // Fullscreen is optional. The overlay still guides the user to rotate.
+  }
+
+  try {
+    await screen.orientation?.lock?.('landscape');
+  } catch {
+    // Browsers may reject orientation locking unless fullscreen is active.
+  }
+
+  refreshOrientation();
+};
+
+rotateButton?.addEventListener('click', requestLandscape, { passive: true });
+window.addEventListener('resize', refreshOrientation, { passive: true });
+window.addEventListener('orientationchange', refreshOrientation, { passive: true });
+
 try {
   game = new Phaser.Game(config);
   installMobileControls();
+  refreshOrientation();
 } catch (error) {
   showBootError(error?.stack || error);
 }
@@ -243,6 +270,7 @@ window.addEventListener('keydown', (event) => {
     ambientAudio.chime('interact');
   }
 });
+
 window.addEventListener('yugen-audio', (event) => {
   ambientAudio.chime(event.detail?.kind || 'dialogue');
 });
