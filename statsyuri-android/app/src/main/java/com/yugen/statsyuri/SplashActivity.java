@@ -13,8 +13,16 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.chaquo.python.Python;
+import com.chaquo.python.android.AndroidPlatform;
+
 /** Short statistical introduction shown before the main analysis screen. */
 public class SplashActivity extends AppCompatActivity {
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private volatile boolean pythonReady = false;
+    private volatile boolean launchRequested = false;
+    private TextView status;
+
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setStatusBarColor(Color.rgb(11, 14, 20));
@@ -42,6 +50,11 @@ public class SplashActivity extends AppCompatActivity {
         fp.topMargin = 118;
         root.addView(formula, fp);
 
+        status = label("Preparing statistical engine…", 12, Color.rgb(127, 138, 158), false);
+        FrameLayout.LayoutParams stp = new FrameLayout.LayoutParams(-2, -2, Gravity.CENTER_HORIZONTAL | Gravity.BOTTOM);
+        stp.bottomMargin = 54;
+        root.addView(status, stp);
+
         setContentView(root);
 
         AnimatorSet intro = new AnimatorSet();
@@ -54,11 +67,32 @@ public class SplashActivity extends AppCompatActivity {
         intro.setDuration(1000);
         intro.start();
 
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            startActivity(new android.content.Intent(this, MainActivity.class));
-            finish();
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+        // Python.start() can take several seconds on a cold Android launch.
+        // Never run it on the UI thread, otherwise the splash screen appears frozen.
+        new Thread(() -> {
+            try {
+                if (!Python.isStarted()) Python.start(new AndroidPlatform(getApplicationContext()));
+                pythonReady = true;
+                handler.post(this::tryLaunchMain);
+            } catch (Throwable error) {
+                handler.post(() -> status.setText("Starting statistical engine…"));
+                // MainActivity will report any actual Python failure when analysis is requested.
+                pythonReady = true;
+                handler.post(this::tryLaunchMain);
+            }
+        }, "StatsYuri-Python-Init").start();
+
+        handler.postDelayed(() -> {
+            launchRequested = true;
+            tryLaunchMain();
         }, 1900);
+    }
+
+    private void tryLaunchMain() {
+        if (!launchRequested || !pythonReady || isFinishing()) return;
+        startActivity(new android.content.Intent(this, MainActivity.class));
+        finish();
+        overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
     }
 
     private TextView label(String text, int size, int color, boolean bold) {
