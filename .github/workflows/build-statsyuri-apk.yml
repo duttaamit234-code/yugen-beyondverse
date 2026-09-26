@@ -28,9 +28,7 @@ jobs:
       - name: Install Android SDK packages
         run: |
           SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
-          if [ ! -x "$SDKMANAGER" ]; then
-            SDKMANAGER="${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager"
-          fi
+          if [ ! -x "$SDKMANAGER" ]; then SDKMANAGER="${ANDROID_HOME}/cmdline-tools/16.0/bin/sdkmanager"; fi
           yes | "$SDKMANAGER" --licenses >/dev/null || true
           "$SDKMANAGER" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
@@ -39,7 +37,7 @@ jobs:
         with:
           gradle-version: '8.11.1'
 
-      - name: Stage stable native engine
+      - name: Stage native engine and report UI
         run: |
           DEST="yugen-analytica-android/app/src/main/java/com/yugen/statsyuri"
           mkdir -p "$DEST"
@@ -47,15 +45,20 @@ jobs:
           cp statsyuri-android/app/src/main/java/com/yugen/statsyuri/StatsBackgroundView.java "$DEST/StatsBackgroundView.java"
           cp statsyuri-android/app/src/main/java/com/yugen/statsyuri/StatsLearningView.java "$DEST/StatsLearningView.java"
           cp statsyuri-android/app/src/main/java/com/yugen/statsyuri/StatisticsEngine.java "$DEST/StatisticsEngine.java"
+          cp statsyuri-android/app/src/main/java/com/yugen/statsyuri/AnalysisReportView.java "$DEST/AnalysisReportView.java"
           python3 - <<'PY'
           from pathlib import Path
-          p = Path("yugen-analytica-android/app/src/main/java/com/yugen/statsyuri/StatisticsEngine.java")
-          s = p.read_text()
-          old = "double[][]X=xx.toArray(new double[0][]),Y=toArray(yy);"
-          new = "double[][]X=xx.toArray(new double[0][]);double[]Y=toArray(yy);"
-          if old not in s:
-              raise SystemExit("Expected regression declaration was not found")
-          p.write_text(s.replace(old, new, 1))
+          p=Path("yugen-analytica-android/app/src/main/java/com/yugen/statsyuri/StatisticsEngine.java")
+          s=p.read_text(); old="double[][]X=xx.toArray(new double[0][]),Y=toArray(yy);"; new="double[][]X=xx.toArray(new double[0][]);double[]Y=toArray(yy);"
+          if old not in s: raise SystemExit("Expected regression declaration was not found")
+          p.write_text(s.replace(old,new,1))
+
+          p=Path("yugen-analytica-android/app/src/main/java/com/yugen/statsyuri/StatsYuriActivity.java")
+          s=p.read_text()
+          start=s.index('    private void showResult(StatisticsEngine.Result r){')
+          end=s.index('    private void toggleTheme(){',start)
+          replacement='''    private void showResult(StatisticsEngine.Result r){\n        status.setText("Completed locally: "+r.title);\n        LinearLayout report= new AnalysisReportView(this,dark).render(r);\n        content.addView(report,Math.max(0,content.getChildCount()-1));\n    }\n'''
+          p.write_text(s[:start]+replacement+s[end:])
           PY
 
       - name: Build release APK
@@ -67,35 +70,21 @@ jobs:
           KEYSTORE="$HOME/.android/debug.keystore"
           mkdir -p "$HOME/.android"
           if [ ! -f "$KEYSTORE" ]; then
-            keytool -genkeypair -v \
-              -keystore "$KEYSTORE" \
-              -storepass android \
-              -alias androiddebugkey \
-              -keypass android \
-              -keyalg RSA \
-              -keysize 2048 \
-              -validity 10000 \
-              -dname "CN=Android Debug,O=Android,C=US"
+            keytool -genkeypair -v -keystore "$KEYSTORE" -storepass android -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
           APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
           INPUT="yugen-analytica-android/app/build/outputs/apk/release/app-release.apk"
-          OUTPUT="yugen-analytica-android/app/build/outputs/apk/release/StatsYuri-0.7.0.apk"
-          "$APKSIGNER" sign \
-            --ks "$KEYSTORE" \
-            --ks-pass pass:android \
-            --key-pass pass:android \
-            --out "$OUTPUT" \
-            "$INPUT"
+          OUTPUT="yugen-analytica-android/app/build/outputs/apk/release/StatsYuri-0.7.1.apk"
+          "$APKSIGNER" sign --ks "$KEYSTORE" --ks-pass pass:android --key-pass pass:android --out "$OUTPUT" "$INPUT"
           "$APKSIGNER" verify --verbose "$OUTPUT"
 
       - name: Show generated APK
-        run: |
-          find yugen-analytica-android/app/build/outputs -type f -name '*.apk' -print -exec ls -lh {} \;
+        run: find yugen-analytica-android/app/build/outputs -type f -name '*.apk' -print -exec ls -lh {} \;
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: StatsYuri-native-full-apk
+          name: StatsYuri-0.7.1-readable-analysis-apk
           path: yugen-analytica-android/app/build/outputs/**/*.apk
           if-no-files-found: error
           retention-days: 30
