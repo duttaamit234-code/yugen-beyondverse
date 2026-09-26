@@ -108,7 +108,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         android.widget.Button google = new android.widget.Button(this);
         google.setText("Sign in with Google");
-        google.setTextAllCaps(false);
+        google.setAllCaps(false);
         google.setTextSize(15);
         google.setOnClickListener(v -> signInWithGoogle());
         accountCard.addView(google);
