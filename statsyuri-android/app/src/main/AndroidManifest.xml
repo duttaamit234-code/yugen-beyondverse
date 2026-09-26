@@ -3,6 +3,8 @@
 
     <application
         android:theme="@style/Theme.StatsYuri"
+        android:icon="@drawable/ic_statsyuri"
+        android:roundIcon="@drawable/ic_statsyuri"
         android:label="StatsYuri"
         android:allowBackup="true"
         android:supportsRtl="true">
