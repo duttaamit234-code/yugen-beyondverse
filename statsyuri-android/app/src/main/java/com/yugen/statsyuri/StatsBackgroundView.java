@@ -36,7 +36,6 @@ public class StatsBackgroundView extends View {
 
     @Override protected void onDetachedFromWindow() {
         attached = false;
-        removeCallbacksAndMessages(null);
         super.onDetachedFromWindow();
     }
 
@@ -48,7 +47,6 @@ public class StatsBackgroundView extends View {
         float seconds = (System.currentTimeMillis() - start) / 1000f;
 
         canvas.drawColor(light ? Color.rgb(246, 247, 250) : Color.rgb(8, 11, 17));
-
         paint.setStrokeWidth(1f);
         paint.setColor(light ? 0x14000000 : 0x16FFFFFF);
         float grid = 44f;
