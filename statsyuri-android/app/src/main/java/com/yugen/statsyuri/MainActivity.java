@@ -1,15 +1,17 @@
 package com.yugen.statsyuri;
 
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
-import android.graphics.Color;
-import android.graphics.drawable.GradientDrawable;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -17,7 +19,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
 import com.chaquo.python.PyObject;
-import com.google.android.material.button.MaterialButtonToggleGroup;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -35,39 +36,43 @@ public class MainActivity extends AppCompatActivity {
     private TextView fileName, status, modeHint;
     private LinearLayout resultContainer;
     private Uri selectedUri;
+    private RadioGroup modeGroup;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
 
     private final int CARD = Color.rgb(26, 31, 44);
     private final int SURFACE = Color.rgb(36, 43, 61);
     private final int ACCENT = Color.rgb(201, 169, 255);
+    private final int TEXT = Color.rgb(245, 241, 255);
+    private final int MUTED = Color.rgb(170, 178, 194);
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
         questionInput = findViewById(R.id.questionInput);
         fileName = findViewById(R.id.fileName);
         status = findViewById(R.id.status);
         modeHint = findViewById(R.id.modeHint);
         resultContainer = findViewById(R.id.resultContainer);
+        modeGroup = findViewById(R.id.modeGroup);
 
+        findViewById(R.id.settingsButton).setOnClickListener(v ->
+                startActivity(new Intent(this, SettingsActivity.class)));
         findViewById(R.id.selectFileButton).setOnClickListener(v -> chooseFile());
         findViewById(R.id.analyzeButton).setOnClickListener(v -> analyze());
 
-        MaterialButtonToggleGroup modes = findViewById(R.id.modeGroup);
-        modes.addOnButtonCheckedListener((group, checkedId, checked) -> {
-            if (!checked) return;
-            modeHint.setText(checkedId == R.id.fullMode
-                    ? "Full evaluates every compatible analysis it can calculate."
-                    : "Efficient selects one compatible analysis and explains it.");
+        modeGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.fullMode) {
+                modeHint.setText("Full mode calculates every compatible analysis it can find.");
+            } else {
+                modeHint.setText("Efficient mode selects one compatible analysis and explains it.");
+            }
         });
-
-        if (!Python.isStarted()) Python.start(new AndroidPlatform(this));
     }
 
     private boolean isFullMode() {
-        MaterialButtonToggleGroup modes = findViewById(R.id.modeGroup);
-        return modes.getCheckedButtonId() == R.id.fullMode;
+        return modeGroup.getCheckedRadioButtonId() == R.id.fullMode;
     }
 
     private void chooseFile() {
@@ -79,10 +84,10 @@ public class MainActivity extends AppCompatActivity {
 
     @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == PICK_FILE && resultCode == RESULT_OK && data != null) {
+        if (requestCode == PICK_FILE && resultCode == RESULT_OK && data != null && data.getData() != null) {
             selectedUri = data.getData();
             fileName.setText(getFileName(selectedUri));
-            status.setText("Dataset ready. Tap Analyze to inspect it automatically.");
+            status.setText("Dataset ready. Tap Analyze to inspect it locally.");
             resultContainer.removeAllViews();
         }
     }
@@ -94,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
                 int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
                 if (index >= 0) name = cursor.getString(index);
             }
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) { }
         return name == null ? uri.toString() : name;
     }
 
@@ -110,6 +115,7 @@ public class MainActivity extends AppCompatActivity {
         executor.execute(() -> {
             try {
                 File localFile = copyToCache(selectedUri);
+                if (!Python.isStarted()) Python.start(new AndroidPlatform(this));
                 Python py = Python.getInstance();
                 String moduleName = full ? "statsyuri_full_v2" : "statsyuri_bridge";
                 PyObject module = py.getModule(moduleName);
@@ -135,6 +141,7 @@ public class MainActivity extends AppCompatActivity {
         File file = new File(getCacheDir(), safe);
         try (InputStream input = getContentResolver().openInputStream(uri);
              FileOutputStream output = new FileOutputStream(file)) {
+            if (input == null) throw new IllegalStateException("Unable to open the selected file.");
             byte[] buffer = new byte[8192];
             int n;
             while ((n = input.read(buffer)) != -1) output.write(buffer, 0, n);
@@ -146,14 +153,16 @@ public class MainActivity extends AppCompatActivity {
         try {
             JSONObject root = new JSONObject(json);
             addSummary(root, full);
-            if (full && root.optJSONArray("analyses") != null) {
-                JSONArray analyses = root.optJSONArray("analyses");
-                addHeading("Compatible analyses", (analyses == null ? 0 : analyses.length()) + " calculated candidates");
-                if (analyses != null) for (int i = 0; i < analyses.length(); i++) {
+            JSONArray analyses = root.optJSONArray("analyses");
+            if (full && analyses != null) {
+                addHeading("Compatible analyses", analyses.length() + " calculated candidates");
+                for (int i = 0; i < analyses.length(); i++) {
                     JSONObject item = analyses.optJSONObject(i);
                     if (item != null) addAnalysisCard(item, i + 1);
                 }
-            } else addAnalysisCard(root, 1);
+            } else {
+                addAnalysisCard(root, 1);
+            }
         } catch (Exception e) {
             addCard("Analysis output", json, false);
         }
@@ -165,17 +174,17 @@ public class MainActivity extends AppCompatActivity {
         String rows = root.isNull("rows") ? "-" : String.valueOf(root.optInt("rows", 0));
         JSONArray columns = root.optJSONArray("columns");
         LinearLayout box = cardLayout();
-        box.addView(text(analysis, 20, Color.rgb(245,241,255), true));
+        box.addView(text(analysis, 20, TEXT, true));
         box.addView(text(full ? root.optInt("analysis_count", 0) + " compatible analyses were evaluated."
-                : "One compatible analysis was selected from the dataset.", 13, Color.LTGRAY, false));
+                : "One compatible analysis was selected from the dataset.", 14, MUTED, false));
         LinearLayout chips = new LinearLayout(this);
         chips.setOrientation(LinearLayout.HORIZONTAL);
-        chips.setPadding(0, 13, 0, 0);
+        chips.setPadding(0, 12, 0, 0);
         chips.addView(chip("Rows", rows));
         chips.addView(chip("Columns", columns == null ? "0" : String.valueOf(columns.length())));
         box.addView(chips);
-        if (columns != null) box.addView(text(joinArray(columns, ", "), 12, Color.rgb(127,138,158), false));
-        if (!reason.isEmpty()) box.addView(text(simplifyReason(reason), 14, Color.rgb(221,226,235), false));
+        if (columns != null) box.addView(text(joinArray(columns, ", "), 13, MUTED, false));
+        if (!reason.isEmpty()) box.addView(text("Why this analysis\n" + simplifyReason(reason), 15, Color.rgb(221,226,235), false));
         resultContainer.addView(box, marginParams(0, 12, 0, 0));
         addPlan(root.optJSONObject("plan"));
     }
@@ -183,7 +192,7 @@ public class MainActivity extends AppCompatActivity {
     private void addPlan(JSONObject plan) {
         if (plan == null || plan.length() == 0) return;
         LinearLayout box = cardLayout();
-        box.addView(text("Statistical plan", 18, Color.rgb(245,241,255), true));
+        box.addView(text("Statistical plan", 18, TEXT, true));
         addPlanField(box, plan, "objective", "Objective");
         addPlanField(box, plan, "design", "Study design");
         addPlanField(box, plan, "response", "Response / outcome");
@@ -198,20 +207,18 @@ public class MainActivity extends AppCompatActivity {
         if (!plan.has(key) || plan.isNull(key)) return;
         String value = humanValue(plan.opt(key));
         if (value.isEmpty() || value.equals("null")) return;
-        TextView v = text(label + "\n" + value, 14, Color.rgb(220,225,234), false);
-        v.setPadding(0, 10, 0, 0);
-        box.addView(v);
+        box.addView(text(label + "\n" + value, 15, Color.rgb(220,225,234), false));
     }
 
     private void addAnalysisCard(JSONObject item, int number) {
         String name = humanAnalysis(item.optString("analysis", item.optString("confirmed_analysis", "Analysis")));
         boolean ok = item.optBoolean("ok", true);
         LinearLayout box = cardLayout();
-        box.addView(text(number + ".  " + name, 18, Color.rgb(245,241,255), true));
-        box.addView(text(ok ? "Calculated successfully" : "Could not calculate this analysis", 12,
+        box.addView(text(number + ".  " + name, 18, TEXT, true));
+        box.addView(text(ok ? "Calculated successfully" : "Could not calculate this analysis", 13,
                 ok ? Color.rgb(159,231,196) : Color.rgb(255,210,125), true));
         String reason = item.optString("reason", "");
-        if (!reason.isEmpty()) box.addView(text("WHY THIS ANALYSIS\n" + simplifyReason(reason), 14, Color.rgb(218,224,234), false));
+        if (!reason.isEmpty()) box.addView(text("Why this analysis\n" + simplifyReason(reason), 15, Color.rgb(218,224,234), false));
 
         JSONObject execution = item.optJSONObject("execution");
         if (execution != null) {
@@ -222,19 +229,19 @@ public class MainActivity extends AppCompatActivity {
         }
         JSONObject directResult = item.optJSONObject("result");
         if (directResult != null) addResults(box, directResult);
-        if (item.has("error") && !item.isNull("error")) box.addView(text(humanValue(item.opt("error")), 13, Color.rgb(255,176,176), false));
+        if (item.has("error") && !item.isNull("error")) box.addView(text(humanValue(item.opt("error")), 14, Color.rgb(255,176,176), false));
         resultContainer.addView(box, marginParams(0, 12, 0, 0));
     }
 
     private void addCalculation(LinearLayout box, String calculation) {
-        box.addView(text("CALCULATION", 11, ACCENT, true));
+        box.addView(text("Calculation", 12, ACCENT, true));
         for (String line : calculation.split("\\n")) {
-            if (!line.trim().isEmpty()) box.addView(text(line.trim(), 14, Color.rgb(224,228,236), false));
+            if (!line.trim().isEmpty()) box.addView(text(line.trim(), 15, Color.rgb(224,228,236), false));
         }
     }
 
     private void addResults(LinearLayout box, JSONObject values) {
-        box.addView(text("RESULT", 11, ACCENT, true));
+        box.addView(text("Results", 12, ACCENT, true));
         Iterator<String> keys = values.keys();
         while (keys.hasNext()) {
             String key = keys.next();
@@ -245,8 +252,8 @@ public class MainActivity extends AppCompatActivity {
             bg.setColor(SURFACE);
             bg.setCornerRadius(13f);
             row.setBackground(bg);
-            row.addView(text(humanKey(key), 12, Color.rgb(151,161,178), true));
-            row.addView(text(humanValue(values.opt(key)), 14, Color.rgb(240,243,248), false));
+            row.addView(text(humanKey(key), 13, Color.rgb(151,161,178), true));
+            row.addView(text(humanValue(values.opt(key)), 15, Color.rgb(240,243,248), false));
             box.addView(row, marginParams(0, 9, 0, 0));
         }
     }
@@ -255,15 +262,15 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(4, 8, 4, 2);
-        box.addView(text(title, 20, Color.rgb(245,241,255), true));
-        box.addView(text(subtitle, 13, Color.rgb(127,138,158), false));
+        box.addView(text(title, 20, TEXT, true));
+        box.addView(text(subtitle, 13, MUTED, false));
         resultContainer.addView(box, marginParams(0, 8, 0, 0));
     }
 
     private void addCard(String title, String body, boolean success) {
         LinearLayout box = cardLayout();
         box.addView(text(title, 18, success ? Color.rgb(159,231,196) : Color.rgb(255,210,125), true));
-        box.addView(text(body, 14, Color.rgb(220,225,234), false));
+        box.addView(text(body, 15, Color.rgb(220,225,234), false));
         resultContainer.addView(box, marginParams(0, 12, 0, 0));
     }
 
@@ -325,19 +332,19 @@ public class MainActivity extends AppCompatActivity {
     private String humanKey(String key) {
         if (key == null) return "Value";
         String k = key.replace('_', ' ');
-        if (k.equals("P-Value")) return "p-value";
-        if (k.equals("F-Statistic")) return "F statistic";
-        if (k.equals("T-Statistic")) return "t statistic";
-        if (k.equals("R-Squared")) return "R²";
+        if (k.equalsIgnoreCase("p-value")) return "p-value";
+        if (k.equalsIgnoreCase("f-statistic")) return "F statistic";
+        if (k.equalsIgnoreCase("t-statistic")) return "t statistic";
+        if (k.equalsIgnoreCase("r-squared")) return "R²";
         return k;
     }
 
     private String humanValue(Object value) {
         if (value == null || value == JSONObject.NULL) return "Not available";
-        if (value instanceof JSONObject) return prettyObject((JSONObject)value);
-        if (value instanceof JSONArray) return prettyArray((JSONArray)value);
+        if (value instanceof JSONObject) return prettyObject((JSONObject) value);
+        if (value instanceof JSONArray) return prettyArray((JSONArray) value);
         if (value instanceof Double || value instanceof Float) {
-            double d = ((Number)value).doubleValue();
+            double d = ((Number) value).doubleValue();
             if (Double.isNaN(d) || Double.isInfinite(d)) return String.valueOf(d);
             if (Math.abs(d) < 0.0001 && d != 0) return String.format(java.util.Locale.US, "%.3e", d);
             return String.format(java.util.Locale.US, "%.5f", d).replaceAll("0+$", "").replaceAll("\\.$", "");
@@ -359,7 +366,7 @@ public class MainActivity extends AppCompatActivity {
     private String prettyArray(JSONArray array) {
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < array.length(); i++) {
-            if (i > 0) out.append("  •  ");
+            if (i > 0) out.append(", ");
             out.append(humanValue(array.opt(i)));
         }
         return out.toString();
@@ -369,7 +376,7 @@ public class MainActivity extends AppCompatActivity {
         StringBuilder out = new StringBuilder();
         for (int i = 0; i < array.length(); i++) {
             if (i > 0) out.append(separator);
-            out.append(humanValue(array.opt(i)));
+            out.append(String.valueOf(array.opt(i)).replace('_', ' '));
         }
         return out.toString();
     }
