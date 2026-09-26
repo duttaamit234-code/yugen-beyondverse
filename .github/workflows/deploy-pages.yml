@@ -27,19 +27,158 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Repair stale GameScene bootstrap call
+      - name: Repair GameScene and add mobile controller
         run: |
           python - <<'PY'
           from pathlib import Path
-          p = Path('src/scenes/GameScene.js')
+          import re
+
+          root = Path('.')
+
+          # Keep the known bootstrap repair idempotent.
+          p = root / 'src/scenes/GameScene.js'
           s = p.read_text()
-          old = 'this.buildWorld(); this.buildPlayer(); this.buildCharacters();'
-          new = 'this.buildWorld(); this.buildCharacters();'
-          if old in s:
-              p.write_text(s.replace(old, new, 1))
-              print('Removed stale GameScene.buildPlayer() call.')
-          else:
-              print('GameScene bootstrap already clean.')
+          s = s.replace('this.buildWorld(); this.buildPlayer(); this.buildCharacters();', 'this.buildWorld(); this.buildCharacters();', 1)
+
+          marker = 'MOBILE_CONTROLLER_V2'
+          if marker not in s:
+              methods = r'''
+
+  // MOBILE_CONTROLLER_V2: responsive virtual joystick + large interaction button.
+  buildTouchControls() {
+    this.touchState = { left:false, right:false, up:false, down:false };
+    this.touchUi = [];
+    const mobile = Boolean(this.sys.game.device.input.touch) || Boolean(this.scale.isPortrait) || this.scale.parentSize.width < 900;
+    if (!mobile) return;
+
+    const radius = Math.max(58, Math.min(86, Math.min(this.scale.width, this.scale.height) * 0.10));
+    const baseX = radius + 28;
+    const baseY = this.scale.height - radius - 30;
+    this.touchJoystick = {
+      baseX, baseY, radius,
+      pointerId: null
+    };
+
+    const base = this.add.circle(baseX, baseY, radius, 0x101525, 0.58)
+      .setStrokeStyle(3, 0xb6c0d4, 0.55).setScrollFactor(0).setDepth(1000).setInteractive();
+    const ring = this.add.circle(baseX, baseY, radius * 0.62, 0x172033, 0.34)
+      .setStrokeStyle(2, 0x8e9ab2, 0.42).setScrollFactor(0).setDepth(1001);
+    const thumb = this.add.circle(baseX, baseY, radius * 0.34, 0xced5e2, 0.82)
+      .setStrokeStyle(2, 0xffffff, 0.55).setScrollFactor(0).setDepth(1002);
+    const label = this.add.text(baseX, baseY - radius - 16, 'MOVE', {
+      fontFamily:'sans-serif', fontSize:'11px', color:'#d7deea', letterSpacing:1.5
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1003);
+
+    const interactX = this.scale.width - Math.max(78, radius);
+    const interactY = this.scale.height - Math.max(78, radius);
+    const interact = this.add.circle(interactX, interactY, Math.max(42, radius * 0.78), 0x241e28, 0.78)
+      .setStrokeStyle(3, 0xffe8a7, 0.65).setScrollFactor(0).setDepth(1000).setInteractive();
+    const interactLabel = this.add.text(interactX, interactY, 'E', {
+      fontFamily:'sans-serif', fontSize:'24px', color:'#fff1b0', fontStyle:'bold'
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+    const interactHint = this.add.text(interactX, interactY + Math.max(42, radius * 0.78) + 8, 'INTERACT', {
+      fontFamily:'sans-serif', fontSize:'10px', color:'#d7cfae', letterSpacing:1.2
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
+
+    this.touchUi.push(base, ring, thumb, label, interact, interactLabel, interactHint);
+    this.touchJoystick.base = base;
+    this.touchJoystick.thumb = thumb;
+
+    const reset = (pointer) => {
+      if (!this.touchJoystick || pointer?.id !== this.touchJoystick.pointerId) return;
+      this.touchJoystick.pointerId = null;
+      thumb.setPosition(baseX, baseY);
+      this.touchState.left = this.touchState.right = this.touchState.up = this.touchState.down = false;
+      base.setAlpha(0.58); thumb.setAlpha(0.82);
+    };
+    const updateVector = (pointer) => {
+      if (!this.touchJoystick || pointer.id !== this.touchJoystick.pointerId) return;
+      let dx = pointer.x - baseX, dy = pointer.y - baseY;
+      const length = Math.hypot(dx, dy) || 1;
+      const max = radius * 0.70;
+      if (length > max) { dx = dx / length * max; dy = dy / length * max; }
+      thumb.setPosition(baseX + dx, baseY + dy);
+      const nx = dx / max, ny = dy / max;
+      this.touchState.left = nx < -0.22;
+      this.touchState.right = nx > 0.22;
+      this.touchState.up = ny < -0.22;
+      this.touchState.down = ny > 0.22;
+      base.setAlpha(0.78); thumb.setAlpha(1);
+    };
+
+    base.on('pointerdown', (pointer, _lx, _ly, event) => {
+      event.stopPropagation();
+      this.touchJoystick.pointerId = pointer.id;
+      updateVector(pointer);
+    });
+    interact.on('pointerdown', (_pointer, _lx, _ly, event) => {
+      event.stopPropagation();
+      interact.setScale(0.92);
+      this.handleInteract();
+    });
+    interact.on('pointerup', (_pointer, _lx, _ly, event) => {
+      event.stopPropagation(); interact.setScale(1);
+    });
+    this.input.on('pointermove', updateVector);
+    this.input.on('pointerup', reset);
+    this.input.on('pointerupoutside', reset);
+    this.scale.on('resize', () => this.repositionTouchControls(), this);
+  }
+
+  repositionTouchControls() {
+    if (!this.touchJoystick || !this.touchUi?.length) return;
+    const r = this.touchJoystick.radius;
+    const bx = r + 28, by = this.scale.height - r - 30;
+    const ix = this.scale.width - Math.max(78, r), iy = this.scale.height - Math.max(78, r);
+    this.touchJoystick.baseX = bx; this.touchJoystick.baseY = by;
+    const [base, ring, thumb, label, interact, interactLabel, interactHint] = this.touchUi;
+    base.setPosition(bx, by); ring.setPosition(bx, by); thumb.setPosition(bx, by); label.setPosition(bx, by-r-16);
+    interact.setPosition(ix, iy); interactLabel.setPosition(ix, iy); interactHint.setPosition(ix, iy+Math.max(42,r*0.78)+8);
+  }
+
+  buildInput() {
+    this.keys = this.input.keyboard.addKeys('W,A,S,D,E,UP,DOWN,LEFT,RIGHT,SPACE');
+    this.input.keyboard.on('keydown-E', () => this.handleInteract());
+    this.input.keyboard.on('keydown-SPACE', () => this.handleInteract());
+    this.input.on('pointerdown', (pointer) => {
+      if (this.dialogue?.active || this.storyLock) { this.dialogue.advance(); return; }
+      if (this.currentInteractable) this.handleInteract();
+    });
+  }
+
+  showDialogueLine(line) {
+    this.storyLock = true;
+    const w = this.scale.width, h = this.scale.height;
+    const bw = Math.min(900, w - 28);
+    this.dialogueBox.setVisible(true).setPosition(w/2, h - Math.min(155, h*0.18)).setSize(bw, Math.min(190, Math.max(135, h*0.24))).setDepth(110);
+    this.speakerText.setText(line.speaker || '').setVisible(Boolean(line.speaker)).setPosition(w/2-bw/2+20, h-Math.min(185,h*0.24));
+    this.dialogueText.setText(line.text).setVisible(true).setAlpha(1).setDepth(111).setPosition(w/2, h-Math.min(125,h*0.16));
+    this.dialogueText.setWordWrapWidth(Math.max(250, bw-48));
+    this.continueButton.setText('TAP ANYWHERE  •  CONTINUE').setVisible(true).setPosition(w/2, h-28).setDepth(112);
+    this.continueButton.setInteractive();
+  }
+'''
+              idx = s.rfind('\n}')
+              if idx < 0: raise SystemExit('Could not locate GameScene class end')
+              s = s[:idx] + methods + s[idx:]
+          p.write_text(s)
+
+          # Apply the same controller/dialogue improvements to the later-chapter scene.
+          p2 = root / 'src/scenes/LaterChaptersScene.js'
+          s2 = p2.read_text()
+          if marker not in s2:
+              methods2 = methods.replace('this.speakerText', 'this.speaker').replace('this.continueButton', 'this.continueButton').replace('this.dialogueText.setWordWrapWidth(Math.max(250, bw-48));', 'this.dialogueText.setWordWrapWidth(Math.max(250, bw-48));')
+              idx = s2.rfind('\n}')
+              if idx < 0: raise SystemExit('Could not locate LaterChaptersScene class end')
+              s2 = s2[:idx] + methods2 + s2[idx:]
+              p2.write_text(s2)
+
+          # Use Phaser RESIZE on mobile/desktop so portrait phones are not letterboxed into a tiny strip.
+          main = root / 'src/main.js'
+          m = main.read_text()
+          m = m.replace('mode: Phaser.Scale.FIT,', 'mode: Phaser.Scale.RESIZE,')
+          m = m.replace("render: { roundPixels: true },", "render: { roundPixels: true },\n  input: { activePointers: 2, touch: true },")
+          main.write_text(m)
           PY
 
       - name: Commit source repair
@@ -47,11 +186,11 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add yugen-game/src/scenes/GameScene.js
+          git add yugen-game/src/scenes/GameScene.js yugen-game/src/scenes/LaterChaptersScene.js yugen-game/src/main.js
           if git diff --cached --quiet; then
             echo "No source repair commit needed."
           else
-            git commit -m "Fix GameScene bootstrap crash"
+            git commit -m "Add responsive mobile controls and dialogue UX"
             git push
           fi
 
@@ -74,6 +213,11 @@ jobs:
             echo 'Stale buildPlayer call remains.'
             exit 1
           fi
+
+      - name: Verify mobile controls
+        run: |
+          grep -q 'MOBILE_CONTROLLER_V2' src/scenes/GameScene.js
+          grep -q 'Phaser.Scale.RESIZE' src/main.js
 
       - name: Build Phaser game
         run: npm run build
