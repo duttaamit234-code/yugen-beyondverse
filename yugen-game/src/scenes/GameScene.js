@@ -435,11 +435,10 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-E', () => this.handleInteract());
     this.input.keyboard.on('keydown-SPACE', () => this.handleInteract());
 
-    this.input.on('pointerdown', (pointer) => {
-      if (this.dialogue.active) {
-        this.dialogue.advance();
-        return;
-      }
+    this.input.on('pointerdown', () => {
+      // Dialogue box and Continue button own their pointer events.
+      // Avoid advancing twice from the global canvas handler.
+      if (this.dialogue.active) return;
 
       if (this.currentInteractable) {
         this.handleInteract();
