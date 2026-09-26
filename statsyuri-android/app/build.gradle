@@ -1,6 +1,5 @@
 plugins {
     id 'com.android.application'
-    id 'com.chaquo.python'
 }
 
 android {
@@ -11,12 +10,8 @@ android {
         applicationId 'com.yugen.statsyuri'
         minSdk 24
         targetSdk 35
-        versionCode 3
-        versionName '0.3.0'
-
-        ndk {
-            abiFilters 'arm64-v8a', 'x86_64'
-        }
+        versionCode 4
+        versionName '0.4.0-safe'
     }
 
     buildTypes {
@@ -26,28 +21,6 @@ android {
     }
 }
 
-chaquopy {
-    defaultConfig {
-        version = "3.10"
-
-        pip {
-            install "numpy"
-            install "pandas"
-            install "scipy"
-            install "statsmodels"
-            install "openpyxl"
-            install "xlrd"
-        }
-    }
-
-    sourceSets {
-        main {
-            srcDirs = ["../../yugen-analytica", "src/main/python"]
-        }
-    }
-}
-
 dependencies {
-    implementation 'androidx.appcompat:appcompat:1.7.1'
-    implementation 'androidx.activity:activity:1.10.1'
+    // Platform Android UI only. No AppCompat, Google services, or Python runtime.
 }
