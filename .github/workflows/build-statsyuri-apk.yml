@@ -62,6 +62,32 @@ jobs:
         working-directory: yugen-analytica-android
         run: gradle --no-daemon :app:assembleRelease
 
+      - name: Sign APK for direct installation
+        run: |
+          KEYSTORE="$HOME/.android/debug.keystore"
+          mkdir -p "$HOME/.android"
+          if [ ! -f "$KEYSTORE" ]; then
+            keytool -genkeypair -v \
+              -keystore "$KEYSTORE" \
+              -storepass android \
+              -alias androiddebugkey \
+              -keypass android \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US"
+          fi
+          APKSIGNER="$ANDROID_HOME/build-tools/35.0.0/apksigner"
+          INPUT="yugen-analytica-android/app/build/outputs/apk/release/app-release.apk"
+          OUTPUT="yugen-analytica-android/app/build/outputs/apk/release/StatsYuri-0.7.0.apk"
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE" \
+            --ks-pass pass:android \
+            --key-pass pass:android \
+            --out "$OUTPUT" \
+            "$INPUT"
+          "$APKSIGNER" verify --verbose "$OUTPUT"
+
       - name: Show generated APK
         run: |
           find yugen-analytica-android/app/build/outputs -type f -name '*.apk' -print -exec ls -lh {} \;
