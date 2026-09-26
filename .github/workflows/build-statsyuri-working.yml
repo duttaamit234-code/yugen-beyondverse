@@ -19,19 +19,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Remove incompatible UI class and fix regression compiler error
+      - name: Patch Android-safe engine and XLSX reader
         working-directory: statsyuri-android
         run: |
           rm -f app/src/main/java/com/yugen/statsyuri/SettingsButtonView.java
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('app/src/main/java/com/yugen/statsyuri/StatisticsEngine.java')
-          s=p.read_text()
+          import re
+          engine=Path('app/src/main/java/com/yugen/statsyuri/StatisticsEngine.java')
+          s=engine.read_text()
           old='double[][]X=xx.toArray(new double[0][]),Y=toArray(yy);'
           new='double[][]X=xx.toArray(new double[0][]); double[]Y=toArray(yy);'
-          if old not in s:
-              raise SystemExit('Expected regression declaration was not found')
-          p.write_text(s.replace(old,new,1))
+          if old not in s: raise SystemExit('Expected regression declaration was not found')
+          engine.write_text(s.replace(old,new,1))
+
+          p=Path('app/src/main/java/com/yugen/statsyuri/StatsYuriActivity.java')
+          s=p.read_text()
+          start=s.index('    private List<String[]> readXlsx(Uri uri)throws Exception{')
+          end=s.index('    private String readText(InputStream in)throws Exception{',start)
+          replacement='''    private List<String[]> readXlsx(Uri uri)throws Exception{\n        String sharedXml=null,sheet=null;\n        try(InputStream raw=getContentResolver().openInputStream(uri);ZipInputStream z=new ZipInputStream(raw)){\n            if(raw==null)throw new IllegalStateException("file could not be opened");\n            ZipEntry e;\n            while((e=z.getNextEntry())!=null){\n                if("xl/sharedStrings.xml".equals(e.getName())) sharedXml=readText(z);\n                else if("xl/worksheets/sheet1.xml".equals(e.getName())) sheet=readText(z);\n            }\n        }\n        if(sheet==null)throw new IllegalStateException("first worksheet was not found");\n        ArrayList<String> shared=sharedXml==null?new ArrayList<>():parseSharedStrings(new java.io.ByteArrayInputStream(sharedXml.getBytes(StandardCharsets.UTF_8)));\n        return parseSheet(sheet,shared);\n    }\n'''
+          s=s[:start]+replacement+s[end:]
+          p.write_text(s)
           PY
 
       - uses: actions/setup-java@v5
