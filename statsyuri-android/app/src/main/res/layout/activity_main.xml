@@ -57,7 +57,7 @@
                 android:layout_height="130dp"
                 android:layout_marginTop="14dp"
                 android:gravity="top|start"
-                android:hint="Describe the statistical problem in ordinary language."
+                android:hint="Optional: describe the problem. Leave this blank to analyze the dataset automatically."
                 android:inputType="textMultiLine"
                 android:padding="14dp"
                 android:textColor="#FFFFFF"
@@ -90,7 +90,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="Efficient: confirmed analysis only"
+                    android:text="Efficient: automatic analysis only"
                     android:textColor="#E8EDF5" />
 
                 <RadioButton
@@ -125,7 +125,7 @@
             android:fontFamily="monospace"
             android:textColor="#E9EEF7"
             android:textIsSelectable="true"
-            android:textSize="13sp" />
+            android:textSize="14sp" />
 
     </LinearLayout>
 </ScrollView>
