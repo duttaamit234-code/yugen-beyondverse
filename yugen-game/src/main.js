@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import GameScene from './scenes/GameScene.js';
+import LaterChaptersScene from './scenes/LaterChaptersScene.js';
 import './style.css';
 
 const config = {
@@ -19,7 +20,14 @@ const config = {
     default: 'arcade',
     arcade: { debug: false }
   },
-  scene: [GameScene]
+  scene: [GameScene, LaterChaptersScene]
 };
 
-new Phaser.Game(config);
+const game = new Phaser.Game(config);
+
+window.addEventListener('yugen-start-chapter2', () => {
+  if (game.scene.isActive('GameScene')) {
+    game.scene.stop('GameScene');
+  }
+  game.scene.start('LaterChaptersScene');
+});
