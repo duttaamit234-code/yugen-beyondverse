@@ -11,7 +11,7 @@ const showBootError = (message) => {
   if (!boot || !bootError) return;
   boot.style.display = 'grid';
   bootError.style.display = 'block';
-  bootError.innerHTML = `<br><br>Yugen could not start.<br><br>${String(message).replace(/[<>&]/g, '')}`;
+  bootError.textContent = `Yugen could not start.\n\n${String(message || 'Unknown runtime error')}`;
 };
 
 window.addEventListener('error', (event) => {
@@ -25,7 +25,9 @@ window.addEventListener('yugen-ready', () => {
 });
 
 const config = {
-  type: Phaser.AUTO,
+  // The game is entirely vector/Canvas based right now. Canvas avoids mobile
+  // WebGL texture initialization failures while we are still in prototype stage.
+  type: Phaser.CANVAS,
   parent: 'game',
   width: 1280,
   height: 720,
@@ -46,10 +48,6 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
-
-// Give Phaser a moment to create the first canvas before removing the diagnostic
-// screen. If initialization throws, the global error handlers keep it visible.
-setTimeout(() => window.dispatchEvent(new Event('yugen-ready')), 1200);
 
 const themeForStage = (stage = '') => {
   if (stage.startsWith('chapter4')) return 'ruins';
@@ -81,23 +79,8 @@ window.addEventListener('yugen-audio', (event) => {
   ambientAudio.chime(event.detail?.kind || 'dialogue');
 });
 
-const startLaterChapters = () => {
+window.addEventListener('yugen-start-chapter2', () => {
   ambientAudio.chime('transition');
   if (game.scene.isActive('GameScene')) game.scene.stop('GameScene');
-  if (!game.scene.isActive('LaterChaptersScene')) {
-    game.scene.start('LaterChaptersScene');
-  }
-};
-
-window.addEventListener('yugen-start-chapter2', startLaterChapters);
-
-setTimeout(() => {
-  try {
-    const saved = JSON.parse(localStorage.getItem('yugen-beyondverse-save-v1') || 'null');
-    if (saved?.stage?.startsWith('chapter') && saved.stage !== 'chapter4Done') {
-      startLaterChapters();
-    }
-  } catch {
-    // SaveSystem handles corrupt saves.
-  }
-}, 0);
+  if (!game.scene.isActive('LaterChaptersScene')) game.scene.start('LaterChaptersScene');
+});
