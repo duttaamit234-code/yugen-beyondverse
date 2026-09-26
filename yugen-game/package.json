@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --base=/yugen-beyondverse/",
+    "build": "vite build --base=/yugen-beyondverse/ --sourcemap",
     "preview": "vite preview"
   },
   "dependencies": {
