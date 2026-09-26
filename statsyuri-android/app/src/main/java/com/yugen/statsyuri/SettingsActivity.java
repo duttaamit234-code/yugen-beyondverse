@@ -7,6 +7,7 @@ import android.os.CancellationSignal;
 import android.view.Gravity;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
+import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -57,36 +58,31 @@ public class SettingsActivity extends AppCompatActivity {
         root.setPadding(20, 20, 20, 30);
         scroll.addView(root);
 
-        TextView title = text("Settings", 30, TEXT, true);
-        root.addView(title);
+        root.addView(text("Settings", 30, TEXT, true));
         root.addView(text("Personalize StatsYuri and manage your account.", 14, MUTED, false), margin(0, 4, 0, 18));
 
         LinearLayout appearance = card();
         appearance.addView(text("Appearance", 19, TEXT, true));
         appearance.addView(text("Choose how StatsYuri should look.", 13, MUTED, false));
-        LinearLayout modes = new LinearLayout(this);
-        modes.setOrientation(LinearLayout.HORIZONTAL);
+        RadioGroup modes = new RadioGroup(this);
+        modes.setOrientation(RadioGroup.HORIZONTAL);
         modes.setGravity(Gravity.CENTER_VERTICAL);
-        modes.setPadding(0, 12, 0, 0);
-        android.widget.RadioButton system = radio("System default");
+        modes.setPadding(0, 8, 0, 0);
+        android.widget.RadioButton system = radio("System");
         android.widget.RadioButton dark = radio("Dark");
         android.widget.RadioButton light = radio("Light");
         modes.addView(system, weight());
         modes.addView(dark, weight());
         modes.addView(light, weight());
         int current = AppCompatDelegate.getDefaultNightMode();
-        if (current == AppCompatDelegate.MODE_NIGHT_YES) dark.setChecked(true);
-        else if (current == AppCompatDelegate.MODE_NIGHT_NO) light.setChecked(true);
-        else system.setChecked(true);
-        android.widget.CompoundButton.OnCheckedChangeListener listener = (button, checked) -> {
-            if (!checked) return;
-            if (button == dark) AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
-            else if (button == light) AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
+        if (current == AppCompatDelegate.MODE_NIGHT_YES) modes.check(dark.getId());
+        else if (current == AppCompatDelegate.MODE_NIGHT_NO) modes.check(light.getId());
+        else modes.check(system.getId());
+        modes.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == dark.getId()) AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);
+            else if (checkedId == light.getId()) AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
             else AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM);
-        };
-        system.setOnCheckedChangeListener(listener);
-        dark.setOnCheckedChangeListener(listener);
-        light.setOnCheckedChangeListener(listener);
+        });
         appearance.addView(modes);
         root.addView(appearance, margin(0, 0, 0, 12));
 
@@ -223,6 +219,7 @@ public class SettingsActivity extends AppCompatActivity {
 
     private android.widget.RadioButton radio(String label) {
         android.widget.RadioButton r = new android.widget.RadioButton(this);
+        r.setId(View.generateViewId());
         r.setText(label);
         r.setTextColor(TEXT);
         r.setTextSize(12);
