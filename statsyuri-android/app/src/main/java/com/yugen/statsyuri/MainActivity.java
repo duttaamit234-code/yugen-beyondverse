@@ -7,7 +7,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.OpenableColumns;
 import android.graphics.Color;
-import android.view.View;
+import android.graphics.drawable.GradientDrawable;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -17,9 +17,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.chaquo.python.Python;
 import com.chaquo.python.android.AndroidPlatform;
 import com.chaquo.python.PyObject;
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.button.MaterialButtonToggleGroup;
-import com.google.android.material.card.MaterialCardView;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -40,11 +38,9 @@ public class MainActivity extends AppCompatActivity {
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
 
-    private final int BG = Color.rgb(11, 14, 20);
     private final int CARD = Color.rgb(26, 31, 44);
     private final int SURFACE = Color.rgb(36, 43, 61);
     private final int ACCENT = Color.rgb(201, 169, 255);
-    private final int CYAN = Color.rgb(141, 216, 255);
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -109,10 +105,8 @@ public class MainActivity extends AppCompatActivity {
             status.setText("Choose a CSV / Excel dataset first. The question is optional.");
             return;
         }
-
         status.setText(full ? "Running compatible analyses locally…" : "Analyzing the dataset locally…");
         resultContainer.removeAllViews();
-
         executor.execute(() -> {
             try {
                 File localFile = copyToCache(selectedUri);
@@ -137,8 +131,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private File copyToCache(Uri uri) throws Exception {
-        String name = getFileName(uri);
-        String safe = name.replaceAll("[^A-Za-z0-9._-]", "_");
+        String safe = getFileName(uri).replaceAll("[^A-Za-z0-9._-]", "_");
         File file = new File(getCacheDir(), safe);
         try (InputStream input = getContentResolver().openInputStream(uri);
              FileOutputStream output = new FileOutputStream(file)) {
@@ -153,19 +146,14 @@ public class MainActivity extends AppCompatActivity {
         try {
             JSONObject root = new JSONObject(json);
             addSummary(root, full);
-
             if (full && root.optJSONArray("analyses") != null) {
                 JSONArray analyses = root.optJSONArray("analyses");
                 addHeading("Compatible analyses", (analyses == null ? 0 : analyses.length()) + " calculated candidates");
-                if (analyses != null) {
-                    for (int i = 0; i < analyses.length(); i++) {
-                        JSONObject item = analyses.optJSONObject(i);
-                        if (item != null) addAnalysisCard(item, i + 1);
-                    }
+                if (analyses != null) for (int i = 0; i < analyses.length(); i++) {
+                    JSONObject item = analyses.optJSONObject(i);
+                    if (item != null) addAnalysisCard(item, i + 1);
                 }
-            } else {
-                addAnalysisCard(root, 1);
-            }
+            } else addAnalysisCard(root, 1);
         } catch (Exception e) {
             addCard("Analysis output", json, false);
         }
@@ -176,33 +164,18 @@ public class MainActivity extends AppCompatActivity {
         String reason = root.optString("reason", "");
         String rows = root.isNull("rows") ? "-" : String.valueOf(root.optInt("rows", 0));
         JSONArray columns = root.optJSONArray("columns");
-        String columnText = columns == null ? "-" : joinArray(columns, ", ");
-
         LinearLayout box = cardLayout();
-        TextView title = text(analysis, 20, Color.rgb(245,241,255), true);
-        box.addView(title);
-        TextView subtitle = text(full
-                ? root.optInt("analysis_count", 0) + " compatible analyses were evaluated."
-                : "One compatible analysis was selected from the dataset.", 13, Color.LTGRAY, false);
-        subtitle.setPadding(0, 7, 0, 0);
-        box.addView(subtitle);
-
+        box.addView(text(analysis, 20, Color.rgb(245,241,255), true));
+        box.addView(text(full ? root.optInt("analysis_count", 0) + " compatible analyses were evaluated."
+                : "One compatible analysis was selected from the dataset.", 13, Color.LTGRAY, false));
         LinearLayout chips = new LinearLayout(this);
         chips.setOrientation(LinearLayout.HORIZONTAL);
         chips.setPadding(0, 13, 0, 0);
         chips.addView(chip("Rows", rows));
         chips.addView(chip("Columns", columns == null ? "0" : String.valueOf(columns.length())));
         box.addView(chips);
-        if (!columnText.equals("-")) {
-            TextView c = text(columnText, 12, Color.rgb(127,138,158), false);
-            c.setPadding(0, 9, 0, 0);
-            box.addView(c);
-        }
-        if (!reason.isEmpty()) {
-            TextView why = text(simplifyReason(reason), 14, Color.rgb(221,226,235), false);
-            why.setPadding(0, 13, 0, 0);
-            box.addView(why);
-        }
+        if (columns != null) box.addView(text(joinArray(columns, ", "), 12, Color.rgb(127,138,158), false));
+        if (!reason.isEmpty()) box.addView(text(simplifyReason(reason), 14, Color.rgb(221,226,235), false));
         resultContainer.addView(box, marginParams(0, 12, 0, 0));
         addPlan(root.optJSONObject("plan"));
     }
@@ -226,7 +199,7 @@ public class MainActivity extends AppCompatActivity {
         String value = humanValue(plan.opt(key));
         if (value.isEmpty() || value.equals("null")) return;
         TextView v = text(label + "\n" + value, 14, Color.rgb(220,225,234), false);
-        v.setPadding(0, 11, 0, 0);
+        v.setPadding(0, 10, 0, 0);
         box.addView(v);
     }
 
@@ -234,49 +207,29 @@ public class MainActivity extends AppCompatActivity {
         String name = humanAnalysis(item.optString("analysis", item.optString("confirmed_analysis", "Analysis")));
         boolean ok = item.optBoolean("ok", true);
         LinearLayout box = cardLayout();
-        TextView heading = text(number + ".  " + name, 18, Color.rgb(245,241,255), true);
-        box.addView(heading);
-        TextView state = text(ok ? "Calculated successfully" : "Could not calculate this analysis", 12,
-                ok ? Color.rgb(159,231,196) : Color.rgb(255,210,125), true);
-        state.setPadding(0, 7, 0, 0);
-        box.addView(state);
-
+        box.addView(text(number + ".  " + name, 18, Color.rgb(245,241,255), true));
+        box.addView(text(ok ? "Calculated successfully" : "Could not calculate this analysis", 12,
+                ok ? Color.rgb(159,231,196) : Color.rgb(255,210,125), true));
         String reason = item.optString("reason", "");
-        if (!reason.isEmpty()) {
-            TextView why = text("WHY THIS ANALYSIS\n" + simplifyReason(reason), 14, Color.rgb(218,224,234), false);
-            why.setPadding(0, 14, 0, 0);
-            box.addView(why);
-        }
+        if (!reason.isEmpty()) box.addView(text("WHY THIS ANALYSIS\n" + simplifyReason(reason), 14, Color.rgb(218,224,234), false));
 
         JSONObject execution = item.optJSONObject("execution");
-        if (execution == null && item.has("execution") && !item.isNull("execution")) {
-            try { execution = new JSONObject(item.optString("execution")); } catch (Exception ignored) {}
-        }
         if (execution != null) {
             String calculation = execution.optString("calculation", "");
             if (!calculation.isEmpty()) addCalculation(box, calculation);
             JSONObject values = execution.optJSONObject("result");
             if (values != null) addResults(box, values);
         }
-
         JSONObject directResult = item.optJSONObject("result");
         if (directResult != null) addResults(box, directResult);
-        if (item.has("error") && !item.isNull("error")) {
-            TextView err = text(humanValue(item.opt("error")), 13, Color.rgb(255,176,176), false);
-            err.setPadding(0, 12, 0, 0);
-            box.addView(err);
-        }
+        if (item.has("error") && !item.isNull("error")) box.addView(text(humanValue(item.opt("error")), 13, Color.rgb(255,176,176), false));
         resultContainer.addView(box, marginParams(0, 12, 0, 0));
     }
 
     private void addCalculation(LinearLayout box, String calculation) {
         box.addView(text("CALCULATION", 11, ACCENT, true));
-        String[] lines = calculation.split("\\n");
-        for (String line : lines) {
-            if (line.trim().isEmpty()) continue;
-            TextView step = text(line.trim(), 14, Color.rgb(224,228,236), false);
-            step.setPadding(0, 8, 0, 0);
-            box.addView(step);
+        for (String line : calculation.split("\\n")) {
+            if (!line.trim().isEmpty()) box.addView(text(line.trim(), 14, Color.rgb(224,228,236), false));
         }
     }
 
@@ -285,16 +238,15 @@ public class MainActivity extends AppCompatActivity {
         Iterator<String> keys = values.keys();
         while (keys.hasNext()) {
             String key = keys.next();
-            Object value = values.opt(key);
             LinearLayout row = new LinearLayout(this);
             row.setOrientation(LinearLayout.VERTICAL);
             row.setPadding(13, 11, 13, 11);
-            row.setBackgroundColor(SURFACE);
-            TextView label = text(humanKey(key), 12, Color.rgb(151,161,178), true);
-            TextView val = text(humanValue(value), 14, Color.rgb(240,243,248), false);
-            val.setPadding(0, 4, 0, 0);
-            row.addView(label);
-            row.addView(val);
+            GradientDrawable bg = new GradientDrawable();
+            bg.setColor(SURFACE);
+            bg.setCornerRadius(13f);
+            row.setBackground(bg);
+            row.addView(text(humanKey(key), 12, Color.rgb(151,161,178), true));
+            row.addView(text(humanValue(values.opt(key)), 14, Color.rgb(240,243,248), false));
             box.addView(row, marginParams(0, 9, 0, 0));
         }
     }
@@ -316,22 +268,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private LinearLayout cardLayout() {
-        MaterialCardView card = new MaterialCardView(this);
-        card.setCardBackgroundColor(CARD);
-        card.setRadius(22f);
-        card.setStrokeColor(0x0DFFFFFF);
-        card.setStrokeWidth(1);
         LinearLayout inner = new LinearLayout(this);
         inner.setOrientation(LinearLayout.VERTICAL);
         inner.setPadding(18, 17, 18, 17);
-        card.addView(inner);
-        resultContainer.addView(card, marginParams(0, 0, 0, 0));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(CARD);
+        bg.setCornerRadius(22f);
+        bg.setStroke(1, 0x0DFFFFFF);
+        inner.setBackground(bg);
         return inner;
     }
 
     private TextView chip(String label, String value) {
         TextView t = text(label + "  " + value, 12, Color.rgb(232,236,244), true);
-        t.setBackgroundColor(SURFACE);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(SURFACE);
+        bg.setCornerRadius(12f);
+        t.setBackground(bg);
         t.setPadding(12, 8, 12, 8);
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2);
         p.setMargins(0, 0, 8, 0);
@@ -345,6 +298,7 @@ public class MainActivity extends AppCompatActivity {
         t.setTextColor(color);
         t.setTextSize(size);
         t.setLineSpacing(3f, 1f);
+        t.setPadding(0, 5, 0, 5);
         if (bold) t.setTypeface(android.graphics.Typeface.DEFAULT, android.graphics.Typeface.BOLD);
         return t;
     }
@@ -357,9 +311,7 @@ public class MainActivity extends AppCompatActivity {
 
     private String humanAnalysis(String value) {
         if (value == null || value.trim().isEmpty()) return "Statistical analysis";
-        return value.replace("Pearson correlation + simple linear regression", "Pearson correlation + linear regression")
-                .replace("Welch two-sample t-test", "Welch two-sample t-test")
-                .replace("Chi-square test of independence", "Chi-square test of independence");
+        return value.replace("Pearson correlation + simple linear regression", "Pearson correlation + linear regression");
     }
 
     private String simplifyReason(String value) {
@@ -377,14 +329,13 @@ public class MainActivity extends AppCompatActivity {
         if (k.equals("F-Statistic")) return "F statistic";
         if (k.equals("T-Statistic")) return "t statistic";
         if (k.equals("R-Squared")) return "R²";
-        if (k.equals("Degrees of Freedom")) return "Degrees of freedom";
         return k;
     }
 
     private String humanValue(Object value) {
         if (value == null || value == JSONObject.NULL) return "Not available";
-        if (value instanceof JSONObject) return prettyObject((JSONObject) value, 0);
-        if (value instanceof JSONArray) return prettyArray((JSONArray) value);
+        if (value instanceof JSONObject) return prettyObject((JSONObject)value);
+        if (value instanceof JSONArray) return prettyArray((JSONArray)value);
         if (value instanceof Double || value instanceof Float) {
             double d = ((Number)value).doubleValue();
             if (Double.isNaN(d) || Double.isInfinite(d)) return String.valueOf(d);
@@ -394,7 +345,7 @@ public class MainActivity extends AppCompatActivity {
         return String.valueOf(value).replace('_', ' ');
     }
 
-    private String prettyObject(JSONObject object, int depth) {
+    private String prettyObject(JSONObject object) {
         StringBuilder out = new StringBuilder();
         Iterator<String> keys = object.keys();
         while (keys.hasNext()) {
