@@ -46,9 +46,10 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
-// Phaser is now constructed. If a runtime error happens after this point,
-// the global error handler above keeps the diagnostic screen visible.
-window.dispatchEvent(new Event('yugen-ready'));
+
+// Give Phaser a moment to create the first canvas before removing the diagnostic
+// screen. If initialization throws, the global error handlers keep it visible.
+setTimeout(() => window.dispatchEvent(new Event('yugen-ready')), 1200);
 
 const themeForStage = (stage = '') => {
   if (stage.startsWith('chapter4')) return 'ruins';
