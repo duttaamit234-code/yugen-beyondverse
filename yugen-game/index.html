@@ -3,17 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <base href="%BASE_URL%" />
   <title>Yugen: The World That Remembers</title>
   <style>
-    #boot-message{position:fixed;inset:0;display:grid;place-items:center;background:#0b1020;color:#e8e4d0;font:600 18px Georgia,serif;z-index:9999;letter-spacing:.08em}
-    #boot-message small{display:block;margin-top:10px;font:13px system-ui,sans-serif;color:#9fa9b5;text-align:center;letter-spacing:0}
-    #boot-error{display:none;max-width:90vw;white-space:pre-wrap;color:#ffb4b4}
+    html, body { margin: 0; width: 100%; height: 100%; background: #080a10; overflow: hidden; }
+    #game { width: 100%; height: 100%; }
+    #boot-message { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at center, #151a28 0%, #080a10 68%); color: #eee9dc; font: 600 18px Georgia, serif; z-index: 9999; letter-spacing: .08em; text-align: center; }
+    #boot-message small { display: block; margin-top: 10px; font: 13px system-ui, sans-serif; color: #9fa9b5; letter-spacing: 0; }
+    #boot-error { display: none; max-width: 90vw; margin-top: 18px; white-space: pre-wrap; color: #ffb4b4; font: 12px/1.45 monospace; text-align: left; letter-spacing: 0; }
   </style>
 </head>
 <body>
   <div id="game"></div>
-  <div id="boot-message">YUGEN<small>THE WORLD THAT REMEMBERS<br>Awakening the village…</small><div id="boot-error"></div></div>
-  <script type="module" src="%BASE_URL%src/main.js"></script>
+  <div id="boot-message">
+    <div>YUGEN<small>THE WORLD THAT REMEMBERS<br>Awakening the village…</small><div id="boot-error"></div></div>
+  </div>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>
