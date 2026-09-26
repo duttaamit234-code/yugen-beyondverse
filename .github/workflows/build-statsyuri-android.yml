@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - 'statsyuri-android/**'
-      - 'yugen-analytica/**'
       - '.github/workflows/build-statsyuri-android.yml'
   workflow_dispatch:
 
@@ -30,30 +29,12 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Verify Python
-        run: |
-          python --version
-          python3 --version
-          command -v python
-          command -v python3
-
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
           accept-android-sdk-licenses: true
           log-accepted-android-sdk-licenses: false
           packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
-
-      - name: Verify Android SDK
-        run: |
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT"
-          sdkmanager --version
-          sdkmanager --list_installed | grep -E 'platform-tools|platforms;android-35|build-tools;35.0.0' || true
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
