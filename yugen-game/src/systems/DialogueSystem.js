@@ -22,7 +22,11 @@ export default class DialogueSystem {
     }
 
     const line = this.queue.shift();
-    this.scene.showDialogueLine(line);
+    if (typeof this.scene.showDialogueLine === 'function') {
+      this.scene.showDialogueLine(line);
+    } else {
+      this.scene.showLine(line);
+    }
   }
 
   end() {
