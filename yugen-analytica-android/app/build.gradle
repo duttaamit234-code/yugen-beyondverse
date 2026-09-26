@@ -10,16 +10,17 @@ android {
         applicationId 'com.yugenbeyondverse.statsyuri'
         minSdk 24
         targetSdk 35
-        versionCode 7
-        versionName '0.7.0-native-full'
+        versionCode 8
+        versionName '0.7.2-installable'
     }
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            // Do not shrink this build. The previous R8 configuration produced
+            // an APK without classes.dex, which made the APK impossible to install.
+            minifyEnabled false
+            shrinkResources false
             signingConfig signingConfigs.debug
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
