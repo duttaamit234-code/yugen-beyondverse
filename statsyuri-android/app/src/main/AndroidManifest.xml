@@ -1,17 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-
     <application
         android:theme="@style/Theme.StatsYuri"
         android:icon="@drawable/ic_statsyuri"
         android:roundIcon="@drawable/ic_statsyuri"
         android:label="StatsYuri"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:supportsRtl="true">
-
-        <activity
-            android:name=".SettingsActivity"
-            android:screenOrientation="portrait" />
 
         <activity
             android:name=".MainActivity"
@@ -22,11 +17,5 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!-- Kept for compatibility with older installs; no longer used as the launcher. -->
-        <activity
-            android:name=".SplashActivity"
-            android:screenOrientation="portrait"
-            android:exported="false" />
     </application>
 </manifest>
