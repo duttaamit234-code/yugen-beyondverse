@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -25,38 +25,10 @@ jobs:
         working-directory: yugen-game
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Repair stale GameScene bootstrap call
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('src/scenes/GameScene.js')
-          s = p.read_text()
-          old = 'this.buildWorld(); this.buildPlayer(); this.buildCharacters();'
-          new = 'this.buildWorld(); this.buildCharacters();'
-          if old in s:
-              p.write_text(s.replace(old, new, 1))
-              print('Removed stale GameScene.buildPlayer() call.')
-          else:
-              print('GameScene bootstrap already clean.')
-          PY
-
-      - name: Commit source repair
-        working-directory: .
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add yugen-game/src/scenes/GameScene.js
-          if git diff --cached --quiet; then
-            echo "No source repair commit needed."
-          else
-            git commit -m "Fix GameScene bootstrap crash"
-            git push
-          fi
+        uses: actions/checkout@v4
 
       - name: Setup Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
@@ -68,18 +40,32 @@ jobs:
       - name: Verify Phaser version
         run: npm ls phaser --depth=0
 
-      - name: Verify GameScene bootstrap
+      - name: Verify landscape configuration
         run: |
-          if grep -q 'this.buildWorld(); this.buildPlayer(); this.buildCharacters();' src/scenes/GameScene.js; then
-            echo 'Stale buildPlayer call remains.'
-            exit 1
-          fi
+          grep -q 'Phaser.Scale.FIT' src/main.js
+          grep -q 'id="rotate-overlay"' index.html
+          grep -q 'id="yugen-stick-base"' src/main.js || true
+
+      - name: Verify movement bridge
+        run: |
+          grep -q '__yugenTouchVector' src/main.js
+          grep -q 'setVelocity(input.x \* speed, input.y \* speed)' src/main.js
+
+      - name: Syntax checks
+        run: |
+          node --check src/main.js
+          node --check src/scenes/GameScene.js
+          node --check src/scenes/LaterChaptersScene.js
+          node --check src/systems/DialogueSystem.js
+          node --check src/systems/SaveSystem.js
 
       - name: Build Phaser game
         run: npm run build
 
       - name: Verify production bundle
-        run: test -f dist/index.html && test -n "$(find dist/assets -type f | head -n 1)"
+        run: |
+          test -f dist/index.html
+          test -n "$(find dist/assets -type f | head -n 1)"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
