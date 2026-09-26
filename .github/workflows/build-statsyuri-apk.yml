@@ -62,10 +62,14 @@ jobs:
         working-directory: yugen-analytica-android
         run: gradle --no-daemon :app:assembleRelease
 
+      - name: Show generated APK
+        run: |
+          find yugen-analytica-android/app/build/outputs -type f -name '*.apk' -print -exec ls -lh {} \;
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: StatsYuri-native-full-apk
-          path: yugen-analytica-android/app/build/outputs/apk/release/app-release.apk
+          path: yugen-analytica-android/app/build/outputs/**/*.apk
           if-no-files-found: error
           retention-days: 30
