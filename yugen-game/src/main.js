@@ -25,9 +25,24 @@ const config = {
 
 const game = new Phaser.Game(config);
 
-window.addEventListener('yugen-start-chapter2', () => {
-  if (game.scene.isActive('GameScene')) {
-    game.scene.stop('GameScene');
+const startLaterChapters = () => {
+  if (game.scene.isActive('GameScene')) game.scene.stop('GameScene');
+  if (!game.scene.isActive('LaterChaptersScene')) {
+    game.scene.start('LaterChaptersScene');
   }
-  game.scene.start('LaterChaptersScene');
-});
+};
+
+window.addEventListener('yugen-start-chapter2', startLaterChapters);
+
+// Returning players should resume chapters 2-4 instead of being dropped
+// back into the chapter 1 scene after refreshing the browser.
+setTimeout(() => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('yugen-beyondverse-save-v1') || 'null');
+    if (saved?.stage?.startsWith('chapter') && saved.stage !== 'chapter4Done') {
+      startLaterChapters();
+    }
+  } catch {
+    // A corrupt save is handled by SaveSystem.
+  }
+}, 0);
