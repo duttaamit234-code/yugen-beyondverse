@@ -1,0 +1,60 @@
+plugins {
+    id 'com.android.application'
+    id 'com.chaquo.python'
+}
+
+android {
+    namespace 'com.yugenbeyondverse.statsyuri'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.yugenbeyondverse.statsyuri'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '1.0.0'
+
+        ndk {
+            abiFilters 'arm64-v8a', 'x86_64'
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+chaquopy {
+    defaultConfig {
+        version = '3.13'
+        buildPython 'python3.13'
+        pip {
+            install 'numpy'
+            install 'pandas'
+            install 'scipy'
+            install 'statsmodels'
+            install 'openpyxl'
+            install 'xlrd'
+            install 'pillow'
+            install 'pypdf'
+            install 'pdfplumber'
+        }
+    }
+    sourceSets {
+        main {
+            srcDirs = ['src/main/python', '../../yugen-analytica']
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    implementation 'com.google.android.material:material:1.13.0'
+    implementation 'androidx.activity:activity:1.10.1'
+    implementation 'androidx.core:core:1.16.0'
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+}
