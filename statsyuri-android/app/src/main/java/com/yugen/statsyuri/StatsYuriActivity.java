@@ -29,6 +29,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /** Stable Android 12 compatible StatsYuri UI and local analysis launcher. */
 public class StatsYuriActivity extends Activity {
