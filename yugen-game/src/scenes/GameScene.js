@@ -11,7 +11,7 @@ export default class GameScene extends Phaser.Scene {
     this.save = loadSave();
     this.dialogue = new DialogueSystem(this);
     this.storyLock = false; this.currentInteractable = null; this.interactables = [];
-    this.buildWorld(); this.buildPlayer(); this.buildCharacters(); this.buildUI(); this.buildInput(); this.buildTouchControls();
+    this.buildWorld(); this.buildCharacters(); this.buildUI(); this.buildInput(); this.buildTouchControls();
     this.physics.world.setBounds(0, 0, this.worldW, this.worldH);
     this.physics.add.collider(this.player, this.obstacles);
     this.cameras.main.setBounds(0, 0, this.worldW, this.worldH);
