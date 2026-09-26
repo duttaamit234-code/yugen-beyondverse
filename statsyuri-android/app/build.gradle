@@ -10,8 +10,8 @@ android {
         applicationId 'com.yugen.statsyuri'
         minSdk 24
         targetSdk 35
-        versionCode 4
-        versionName '0.4.0-safe'
+        versionCode 5
+        versionName '0.5.0-full-stats'
     }
 
     buildTypes {
@@ -22,5 +22,7 @@ android {
 }
 
 dependencies {
-    // Platform Android UI only. No AppCompat, Google services, or Python runtime.
+    // Small, pure-Java numerical library. No Google services, Python runtime,
+    // AppCompat, or heavyweight UI framework is loaded by the app.
+    implementation 'org.apache.commons:commons-math3:3.6.1'
 }
