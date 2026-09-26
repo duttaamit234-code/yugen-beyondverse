@@ -809,7 +809,7 @@ export default class GameScene extends Phaser.Scene {
     );
   }
 
-  applyWorldShift(persist) {
+  applyWorldShift(persist, triggerStory = true) {
     if (this.save.flags.villageShifted && !persist) {
       this.otherVillager.setPosition(1885, 1040);
       this.villagerLabel.setPosition(1885, 985);
@@ -830,6 +830,8 @@ export default class GameScene extends Phaser.Scene {
     if (persist) {
       saveGame(this.save);
     }
+
+    if (!triggerStory) return;
 
     this.startStory(STORY.worldShift, () => {
       this.advanceStage('final');
@@ -945,7 +947,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     if (this.save.flags.villageShifted) {
-      this.applyWorldShift(false);
+      this.applyWorldShift(false, false);
     }
 
     this.setObjectiveFromStage();
