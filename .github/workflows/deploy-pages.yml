@@ -35,10 +35,16 @@ jobs:
           cache-dependency-path: yugen-game/package.json
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-package-lock
+
+      - name: Verify Phaser version
+        run: npm ls phaser --depth=0
 
       - name: Build Phaser game
         run: npm run build
+
+      - name: Verify production bundle
+        run: test -f dist/index.html && test -n "$(find dist/assets -type f | head -n 1)"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
