@@ -49,7 +49,7 @@ function createNavigation(scene) {
     target: scene.add.text(w - 34, 49, '', {
       fontFamily: 'sans-serif', fontSize: '15px', color: '#f0e9d6', fontStyle: 'bold'
     }).setOrigin(1, 0).setScrollFactor(0).setDepth(131),
-    arrow: scene.add.text(w - 155, 91, '➤', {
+    arrow: scene.add.text(w - 166, 92, '➤', {
       fontFamily: 'sans-serif', fontSize: '27px', color: '#fff1b0'
     }).setOrigin(0.5).setScrollFactor(0).setDepth(131),
     distance: scene.add.text(w - 34, 92, '', {
@@ -65,7 +65,6 @@ function createNavigation(scene) {
     backgroundColor: '#161827', padding: { left: 12, right: 12, top: 8, bottom: 8 }
   }).setOrigin(0.5).setScrollFactor(0).setDepth(135).setVisible(false);
 
-  scene.navHUD.panel.setVisible(true);
   layoutNavigation(scene);
 }
 
@@ -95,10 +94,8 @@ function updateNavigation(scene, time = 0) {
   const dx = target.x - scene.player.x;
   const dy = target.y - scene.player.y;
   const distance = Math.round(Math.hypot(dx, dy));
-  const angle = Math.atan2(dy, dx);
-
   nav.target.setText(target.name);
-  nav.arrow.setRotation(angle);
+  nav.arrow.setRotation(Math.atan2(dy, dx));
   nav.distance.setText(distance < 70 ? 'HERE' : `${distance}m`);
 
   if (time - nav.lastMapUpdate >= 100) {
@@ -181,35 +178,26 @@ function installScene(scene) {
   if (!scene || scene.navHUD) return;
   createNavigation(scene);
   const originalUpdate = scene.update;
-  if (!scene.__navigationUpdateWrapped) {
-    scene.__navigationUpdateWrapped = true;
-    scene.update = function (time, delta) {
-      if (typeof originalUpdate === 'function') originalUpdate.call(this, time, delta);
-      updateNavigation(this, time);
-    };
-  }
+  scene.__navigationUpdateWrapped = true;
+  scene.update = function (time, delta) {
+    if (typeof originalUpdate === 'function') originalUpdate.call(this, time, delta);
+    updateNavigation(this, time);
+  };
   scene.scale.on('resize', () => layoutNavigation(scene));
+}
+
+function patchCreate(SceneClass) {
+  const originalCreate = SceneClass.prototype.create;
+  if (SceneClass.prototype.__navigationCreatePatched) return;
+  SceneClass.prototype.__navigationCreatePatched = true;
+  SceneClass.prototype.create = function (...args) {
+    const result = originalCreate.apply(this, args);
+    installScene(this);
+    return result;
+  };
 }
 
 installInteractionFix(GameScene);
 installInteractionFix(LaterChaptersScene);
-
-window.addEventListener('yugen-ready', () => {
-  const game = window.__yugenGame;
-  const scene = game?.scene?.getScenes?.(true)?.find((s) => s?.player?.body);
-  if (scene) installScene(scene);
-});
-
-window.addEventListener('yugen-start-chapter2', () => {
-  setTimeout(() => {
-    const game = window.__yugenGame;
-    const scene = game?.scene?.getScene?.('LaterChaptersScene');
-    if (scene) installScene(scene);
-  }, 150);
-});
-
-window.addEventListener('resize', () => {
-  const game = window.__yugenGame;
-  const scene = game?.scene?.getScenes?.(true)?.find((s) => s?.navHUD);
-  if (scene) layoutNavigation(scene);
-});
+patchCreate(GameScene);
+patchCreate(LaterChaptersScene);
