@@ -243,9 +243,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="28dp"
                 android:gravity="center"
-                android:text="© 2026 Amit Dutta • StatsYuri • Yugen Beyondverse"
+                android:text="© 2026 Yugen Beyondverse. All rights reserved."
                 android:textColor="@color/statsyuri_footer"
-                android:textSize="11sp" />
+                android:textSize="10sp" />
         </LinearLayout>
     </ScrollView>
 </FrameLayout>
