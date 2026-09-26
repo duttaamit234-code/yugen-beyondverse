@@ -1,131 +1,240 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#070A10"
-    android:fillViewport="true">
+    android:background="#0B0E14">
 
-    <LinearLayout
+    <com.yugen.statsyuri.StatsBackgroundView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="22dp">
+        android:layout_height="match_parent" />
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="StatsYuri"
-            android:textColor="#FFFFFF"
-            android:textSize="34sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:text="Offline Statistical Analysis"
-            android:textColor="#8ED8FF"
-            android:textSize="17sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="14dp"
-            android:text="Your data stays on this device."
-            android:textColor="#AAB4C4"
-            android:textSize="14sp" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:clipToPadding="false">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:background="#111824"
             android:orientation="vertical"
-            android:padding="18dp">
+            android:paddingStart="18dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="24dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="StatsYuri"
+                        android:textColor="#F5F1FF"
+                        android:textSize="31sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:text="Statistical analysis, explained clearly"
+                        android:textColor="#8DD8FF"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="#242B3D"
+                    android:paddingStart="11dp"
+                    android:paddingTop="7dp"
+                    android:paddingEnd="11dp"
+                    android:paddingBottom="7dp"
+                    android:text="OFFLINE"
+                    android:textColor="#C9A9FF"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
             <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="📊 Ask StatsYuri"
-                android:textColor="#FFFFFF"
-                android:textSize="23sp"
-                android:textStyle="bold" />
-
-            <EditText
-                android:id="@+id/questionInput"
-                android:layout_width="match_parent"
-                android:layout_height="130dp"
-                android:layout_marginTop="14dp"
-                android:gravity="top|start"
-                android:hint="Optional: describe the problem. Leave this blank to analyze the dataset automatically."
-                android:inputType="textMultiLine"
-                android:padding="14dp"
-                android:textColor="#FFFFFF"
-                android:textColorHint="#778397"
-                android:backgroundTint="#4DA3FF" />
-
-            <Button
-                android:id="@+id/selectFileButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="14dp"
-                android:text="📁 Select CSV / Excel file" />
+                android:layout_marginTop="11dp"
+                android:text="Your data stays on this device. Choose a dataset and StatsYuri will select and explain a suitable analysis."
+                android:textColor="#AEB7C8"
+                android:textSize="14sp"
+                android:lineSpacingExtra="3dp" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                app:cardBackgroundColor="#1A1F2C"
+                app:cardCornerRadius="22dp"
+                app:strokeColor="#FFFFFF0D"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="18dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Ask StatsYuri"
+                        android:textColor="#F5F1FF"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="The question is optional. Leave it empty to analyze the dataset automatically."
+                        android:textColor="#8792A5"
+                        android:textSize="13sp"
+                        android:lineSpacingExtra="2dp" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="13dp"
+                        android:hint="What do you want to find out?"
+                        app:boxBackgroundColor="#242B3D"
+                        app:boxBackgroundMode="filled"
+                        app:boxCornerRadiusBottomEnd="16dp"
+                        app:boxCornerRadiusBottomStart="16dp"
+                        app:boxCornerRadiusTopEnd="16dp"
+                        app:boxCornerRadiusTopStart="16dp"
+                        app:hintTextColor="#8994A8">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:id="@+id/questionInput"
+                            android:layout_width="match_parent"
+                            android:layout_height="110dp"
+                            android:gravity="top|start"
+                            android:inputType="textCapSentences|textMultiLine"
+                            android:padding="14dp"
+                            android:textColor="#F2F4F8"
+                            android:textSize="15sp" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/selectFileButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="12dp"
+                        android:text="Choose CSV / Excel dataset"
+                        android:textAllCaps="false"
+                        android:textColor="#EDE8FF"
+                        android:textSize="14sp"
+                        app:backgroundTint="#242B3D"
+                        app:cornerRadius="16dp"
+                        app:icon="@android:drawable/ic_menu_upload"
+                        app:iconTint="#8DD8FF" />
+
+                    <TextView
+                        android:id="@+id/fileName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:text="No dataset selected"
+                        android:textColor="#7F8A9E"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButtonToggleGroup
+                        android:id="@+id/modeGroup"
+                        android:layout_width="match_parent"
+                        android:layout_height="52dp"
+                        android:layout_marginTop="14dp"
+                        app:checkedButton="@id/efficientMode"
+                        app:singleSelection="true"
+                        app:selectionRequired="true">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/efficientMode"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:text="Efficient"
+                            android:textAllCaps="false"
+                            android:textSize="13sp"
+                            app:backgroundTint="#242B3D" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/fullMode"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:text="Full analysis"
+                            android:textAllCaps="false"
+                            android:textSize="13sp"
+                            app:backgroundTint="#242B3D" />
+                    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+                    <TextView
+                        android:id="@+id/modeHint"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="7dp"
+                        android:text="Efficient selects one compatible analysis."
+                        android:textColor="#7F8A9E"
+                        android:textSize="12sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/analyzeButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:layout_marginTop="13dp"
+                        android:text="Analyze dataset"
+                        android:textAllCaps="false"
+                        android:textColor="#281C43"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:backgroundTint="#C9A9FF"
+                        app:cornerRadius="18dp"
+                        app:icon="@android:drawable/ic_menu_search"
+                        app:iconTint="#281C43" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <TextView
-                android:id="@+id/fileName"
+                android:id="@+id/status"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="No dataset selected"
-                android:textColor="#8C98AA"
-                android:textSize="13sp" />
+                android:layout_marginTop="16dp"
+                android:textColor="#8DD8FF"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:lineSpacingExtra="3dp" />
 
-            <RadioGroup
+            <LinearLayout
+                android:id="@+id/resultContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp">
+                android:layout_marginTop="10dp"
+                android:orientation="vertical" />
 
-                <RadioButton
-                    android:id="@+id/efficientMode"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:checked="true"
-                    android:text="Efficient: automatic analysis only"
-                    android:textColor="#E8EDF5" />
-
-                <RadioButton
-                    android:id="@+id/fullMode"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Full: show compatible analyses"
-                    android:textColor="#E8EDF5" />
-            </RadioGroup>
-
-            <Button
-                android:id="@+id/analyzeButton"
+            <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="🔎 Analyze" />
+                android:layout_marginTop="28dp"
+                android:gravity="center"
+                android:text="© 2026 Amit Dutta • StatsYuri • Yugen Beyondverse"
+                android:textColor="#667083"
+                android:textSize="11sp" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:textColor="#8ED8FF"
-            android:textSize="14sp" />
-
-        <TextView
-            android:id="@+id/result"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
-            android:fontFamily="monospace"
-            android:textColor="#E9EEF7"
-            android:textIsSelectable="true"
-            android:textSize="14sp" />
-
-    </LinearLayout>
-</ScrollView>
+    </ScrollView>
+</FrameLayout>
