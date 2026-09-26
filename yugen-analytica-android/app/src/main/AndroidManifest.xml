@@ -7,7 +7,12 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.StatsYuri">
-        <activity android:name=".StatsYuriActivity" android:exported="true">
+        <!-- MainActivity is the package-correct launcher. It extends the
+             isolated native StatsYuriActivity implementation. -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:screenOrientation="unspecified">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
