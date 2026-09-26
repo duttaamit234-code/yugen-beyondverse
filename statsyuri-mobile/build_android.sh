@@ -12,7 +12,7 @@ flutter create --platforms=android --org com.yugenbeyondverse --project-name sta
 cp "$ROOT/pubspec.yaml" "$BUILD_DIR/pubspec.yaml"
 rm -rf "$BUILD_DIR/lib"
 mkdir -p "$BUILD_DIR/lib"
-cp "$ROOT/lib/main.dart" "$BUILD_DIR/lib/main.dart"
+cp "$ROOT/lib/main_v2.dart" "$BUILD_DIR/lib/main.dart"
 
 rm -rf "$BUILD_DIR/android/app/src/main/python"
 mkdir -p "$BUILD_DIR/android/app/src/main/python"
