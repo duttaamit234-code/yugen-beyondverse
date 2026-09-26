@@ -29,6 +29,7 @@ public class StatsLearningView extends View {
     };
     private int page = 0;
     private float phase = 0f;
+    private float lastPhase = 0f;
     private ValueAnimator animator;
 
     public StatsLearningView(Context context, AttributeSet attrs) {
@@ -41,7 +42,8 @@ public class StatsLearningView extends View {
         animator.setInterpolator(new DecelerateInterpolator());
         animator.addUpdateListener(a -> {
             phase = (float) a.getAnimatedValue();
-            if (phase > 0.985f) page = (page + 1) % messages.length;
+            if (phase < lastPhase) page = (page + 1) % messages.length;
+            lastPhase = phase;
             invalidate();
         });
     }
@@ -80,7 +82,6 @@ public class StatsLearningView extends View {
         paint.setColor(Color.rgb(221, 226, 235));
         drawWrapped(canvas, messages[page], dp(17), dp(49), w - dp(34), dp(17));
 
-        // Tiny animated distribution/fit line. It reinforces the statistical theme without stealing attention.
         float baseY = h - dp(15);
         chart.reset();
         chart.moveTo(dp(17), baseY);
