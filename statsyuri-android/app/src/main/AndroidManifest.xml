@@ -15,10 +15,6 @@
 
         <activity
             android:name=".MainActivity"
-            android:screenOrientation="portrait" />
-
-        <activity
-            android:name=".SplashActivity"
             android:screenOrientation="portrait"
             android:exported="true">
             <intent-filter>
@@ -26,5 +22,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Kept for compatibility with older installs; no longer used as the launcher. -->
+        <activity
+            android:name=".SplashActivity"
+            android:screenOrientation="portrait"
+            android:exported="false" />
     </application>
 </manifest>
