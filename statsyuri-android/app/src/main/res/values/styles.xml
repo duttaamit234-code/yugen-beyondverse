@@ -2,9 +2,10 @@
 <resources>
     <style name="Theme.StatsYuri" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:statusBarColor">#0B0F17</item>
-        <item name="android:navigationBarColor">#0B0F17</item>
-        <item name="android:colorAccent">#4DA3FF</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:statusBarColor">@color/statsyuri_background</item>
+        <item name="android:navigationBarColor">@color/statsyuri_background</item>
+        <item name="android:colorAccent">@color/statsyuri_blue</item>
     </style>
 </resources>
