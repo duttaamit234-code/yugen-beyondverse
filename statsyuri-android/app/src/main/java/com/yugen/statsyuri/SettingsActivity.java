@@ -1,12 +1,10 @@
 package com.yugen.statsyuri;
 
 import android.content.SharedPreferences;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.view.Gravity;
-import android.view.View;
 import android.widget.CheckBox;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -36,15 +34,16 @@ public class SettingsActivity extends AppCompatActivity {
     private CheckBox terms;
     private TextView account;
     private SharedPreferences prefs;
-
-    private final int BG = Color.rgb(11, 14, 20);
-    private final int CARD = Color.rgb(26, 31, 44);
-    private final int TEXT = Color.rgb(245, 241, 255);
-    private final int MUTED = Color.rgb(158, 169, 187);
-    private final int ACCENT = Color.rgb(201, 169, 255);
+    private int BG, CARD, TEXT, MUTED, ACCENT, FOOTER;
 
     @Override protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        BG = getColor(R.color.statsyuri_background);
+        CARD = getColor(R.color.statsyuri_card);
+        TEXT = getColor(R.color.statsyuri_text);
+        MUTED = getColor(R.color.statsyuri_muted);
+        ACCENT = getColor(R.color.statsyuri_accent);
+        FOOTER = getColor(R.color.statsyuri_footer);
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         setTitle("Settings");
         buildUi();
@@ -123,7 +122,7 @@ public class SettingsActivity extends AppCompatActivity {
         privacy.addView(text("CSV and Excel analysis remains local. StatsYuri does not upload a dataset merely because you analyze it. Google sign-in is for account identity and future synchronized features; it does not automatically grant access to Google Drive or other private Google data.", 13, MUTED, false));
         root.addView(privacy, margin(0, 0, 0, 12));
 
-        root.addView(text("© 2026 Amit Dutta • StatsYuri • Yugen Beyondverse", 11, Color.rgb(102,112,131), false));
+        root.addView(text("© 2026 Amit Dutta • StatsYuri • Yugen Beyondverse", 11, FOOTER, false));
         setContentView(scroll);
     }
 
