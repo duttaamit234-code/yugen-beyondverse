@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -27,6 +27,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Repair stale GameScene bootstrap call
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('src/scenes/GameScene.js')
+          s = p.read_text()
+          old = 'this.buildWorld(); this.buildPlayer(); this.buildCharacters();'
+          new = 'this.buildWorld(); this.buildCharacters();'
+          if old in s:
+              p.write_text(s.replace(old, new, 1))
+              print('Removed stale GameScene.buildPlayer() call.')
+          else:
+              print('GameScene bootstrap already clean.')
+          PY
+
+      - name: Commit source repair
+        working-directory: .
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add yugen-game/src/scenes/GameScene.js
+          if git diff --cached --quiet; then
+            echo "No source repair commit needed."
+          else
+            git commit -m "Fix GameScene bootstrap crash"
+            git push
+          fi
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
@@ -39,6 +67,13 @@ jobs:
 
       - name: Verify Phaser version
         run: npm ls phaser --depth=0
+
+      - name: Verify GameScene bootstrap
+        run: |
+          if grep -q 'this.buildWorld(); this.buildPlayer(); this.buildCharacters();' src/scenes/GameScene.js; then
+            echo 'Stale buildPlayer call remains.'
+            exit 1
+          fi
 
       - name: Build Phaser game
         run: npm run build
