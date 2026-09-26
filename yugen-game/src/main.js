@@ -26,9 +26,6 @@ window.addEventListener('yugen-ready', () => {
 });
 
 const config = {
-  // Phaser 3.90 is the production-stable v3 release. We use Canvas for this
-  // prototype because the game currently consists of vector shapes and text,
-  // avoiding unnecessary mobile WebGL texture pressure.
   type: Phaser.CANVAS,
   parent: 'game',
   width: 1280,
@@ -36,8 +33,10 @@ const config = {
   backgroundColor: '#0b1020',
   antialias: true,
   render: { roundPixels: true },
+  input: { activePointers: 2, touch: true },
   scale: {
-    mode: Phaser.Scale.FIT,
+    // RESIZE fills the phone viewport instead of letterboxing a 16:9 canvas.
+    mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,
     expandParent: true
   },
