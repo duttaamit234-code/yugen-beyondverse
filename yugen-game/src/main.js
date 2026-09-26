@@ -16,16 +16,9 @@ const showBootError = (message) => {
   bootError.textContent = `Yugen could not start.\n\n${String(message || 'Unknown runtime error')}`;
   console.error('[YUGEN BOOT]', message);
 };
-
-window.addEventListener('error', (event) => {
-  showBootError(event.error?.stack || event.message || 'Unknown runtime error');
-});
-window.addEventListener('unhandledrejection', (event) => {
-  showBootError(event.reason?.stack || event.reason || 'Unhandled promise error');
-});
-window.addEventListener('yugen-ready', () => {
-  if (boot) boot.style.display = 'none';
-});
+window.addEventListener('error', (event) => showBootError(event.error?.stack || event.message || 'Unknown runtime error'));
+window.addEventListener('unhandledrejection', (event) => showBootError(event.reason?.stack || event.reason || 'Unhandled promise error'));
+window.addEventListener('yugen-ready', () => { if (boot) boot.style.display = 'none'; });
 
 const config = {
   type: Phaser.CANVAS,
@@ -36,28 +29,17 @@ const config = {
   antialias: true,
   render: { roundPixels: true },
   input: { activePointers: 4, touch: true },
-  scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    expandParent: true
-  },
-  physics: {
-    default: 'arcade',
-    arcade: { debug: false }
-  },
+  scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, expandParent: true },
+  physics: { default: 'arcade', arcade: { debug: false } },
   scene: [GameScene, LaterChaptersScene]
 };
 
 let game = null;
 window.__yugenTouchVector = { x: 0, y: 0, active: false };
 
-/*
- * GameScene and LaterChaptersScene already contain their own movement loops.
- * The previous mobile patch replaced buildTouchControls() with an empty
- * function, but those update loops still read touchState/touch. That made the
- * first frame reach `undefined.left` and killed the game. Instead of fighting
- * the scenes, the shared joystick now feeds their existing state variables.
- */
+// Keep the scenes' original movement loops intact. The shared joystick feeds
+// the legacy touch flags before each scene update, preventing undefined-state
+// crashes while retaining keyboard and controller movement.
 const syncLegacyTouchState = (scene) => {
   const input = window.__yugenTouchVector || { x: 0, y: 0, active: false };
   const left = input.active && input.x < -0.15;
@@ -67,19 +49,23 @@ const syncLegacyTouchState = (scene) => {
 
   if (scene instanceof GameScene) {
     scene.touchState ??= { left: false, right: false, up: false, down: false };
-    scene.touchState.left = left;
-    scene.touchState.right = right;
-    scene.touchState.up = up;
-    scene.touchState.down = down;
+    Object.assign(scene.touchState, { left, right, up, down });
   }
-
   if (scene instanceof LaterChaptersScene) {
     scene.touch ??= { left: false, right: false, up: false, down: false };
-    scene.touch.left = left;
-    scene.touch.right = right;
-    scene.touch.up = up;
-    scene.touch.down = down;
+    Object.assign(scene.touch, { left, right, up, down });
   }
+};
+
+const applyTouchMovement = (scene) => {
+  const input = window.__yugenTouchVector;
+  if (!scene?.player?.body || !input?.active) return;
+  if (scene.dialogue?.active || scene.storyLock) {
+    scene.player.body.setVelocity(0, 0);
+    return;
+  }
+  const speed = scene.playerSpeed ?? scene.speed ?? 190;
+  scene.player.body.setVelocity(input.x * speed, input.y * speed);
 };
 
 const wrapSceneUpdate = (SceneClass) => {
@@ -87,14 +73,13 @@ const wrapSceneUpdate = (SceneClass) => {
   SceneClass.prototype.update = function (time, delta) {
     syncLegacyTouchState(this);
     if (typeof original === 'function') original.call(this, time, delta);
+    applyTouchMovement(this);
   };
 };
-
 wrapSceneUpdate(GameScene);
 wrapSceneUpdate(LaterChaptersScene);
 
-// Disable only the old scene-created button graphics. Their state is still
-// supplied above, so the normal Phaser update/movement code remains intact.
+// Do not create the old scene-local buttons. Their state is supplied above.
 GameScene.prototype.buildTouchControls = function () {
   this.touchState = { left: false, right: false, up: false, down: false };
   this.touchControlObjects = [];
@@ -112,7 +97,6 @@ const activeScene = () => {
 
 const installMobileControls = () => {
   if (document.getElementById('yugen-mobile-controls')) return;
-
   const coarse = window.matchMedia?.('(pointer: coarse)')?.matches ?? false;
   const touchCapable = (navigator.maxTouchPoints || 0) > 0;
   if (!coarse && !touchCapable) return;
@@ -151,17 +135,14 @@ const installMobileControls = () => {
       dx = (dx / distance) * maxDistance;
       dy = (dy / distance) * maxDistance;
     }
-
     knob.style.transform = `translate(${dx}px, ${dy}px)`;
     const nx = dx / maxDistance;
     const ny = dy / maxDistance;
     const length = Math.hypot(nx, ny);
-
     if (length < 0.16) {
       window.__yugenTouchVector = { x: 0, y: 0, active: false };
       return;
     }
-
     const scale = Math.min(1, 1 / length);
     window.__yugenTouchVector = { x: nx * scale, y: ny * scale, active: true };
   };
@@ -179,16 +160,12 @@ const installMobileControls = () => {
     joystick.setPointerCapture?.(pointerId);
     setVector(event.clientX, event.clientY);
   }, { passive: false });
-
   joystick.addEventListener('pointermove', (event) => {
     if (event.pointerId !== pointerId) return;
     event.preventDefault();
     setVector(event.clientX, event.clientY);
   }, { passive: false });
-
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => {
-    joystick.addEventListener(type, reset);
-  });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((type) => joystick.addEventListener(type, reset));
 
   const tap = (button, callback) => {
     button.addEventListener('pointerdown', (event) => {
@@ -197,39 +174,28 @@ const installMobileControls = () => {
       button.classList.add('pressed');
       callback();
     }, { passive: false });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => {
-      button.addEventListener(type, () => button.classList.remove('pressed'));
-    });
+    ['pointerup', 'pointercancel', 'pointerleave'].forEach((type) => button.addEventListener(type, () => button.classList.remove('pressed')));
   };
-
   tap(actionE, () => activeScene()?.handleInteract?.());
   tap(actionNext, () => {
     const scene = activeScene();
     if (scene?.dialogue?.active) scene.dialogue.advance();
   });
 
-  const syncVisibility = () => {
-    root.classList.toggle('hidden', window.innerHeight > window.innerWidth);
-  };
+  const syncVisibility = () => root.classList.toggle('hidden', window.innerHeight > window.innerWidth);
   syncVisibility();
   window.addEventListener('resize', syncVisibility, { passive: true });
   window.addEventListener('orientationchange', syncVisibility, { passive: true });
   window.addEventListener('blur', reset);
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) reset();
-  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) reset(); });
 };
 
-const refreshOrientation = () => {
-  rotateOverlay?.classList.toggle('visible', window.innerHeight > window.innerWidth);
-};
-
+const refreshOrientation = () => rotateOverlay?.classList.toggle('visible', window.innerHeight > window.innerWidth);
 const requestLandscape = async () => {
   try { await document.documentElement.requestFullscreen?.(); } catch {}
   try { await screen.orientation?.lock?.('landscape'); } catch {}
   refreshOrientation();
 };
-
 rotateButton?.addEventListener('click', requestLandscape, { passive: true });
 window.addEventListener('resize', refreshOrientation, { passive: true });
 window.addEventListener('orientationchange', refreshOrientation, { passive: true });
@@ -249,7 +215,6 @@ const themeForStage = (stage = '') => {
   if (stage.startsWith('chapter2')) return 'forest';
   return 'village';
 };
-
 const syncMusicToSave = () => {
   try {
     const saved = JSON.parse(localStorage.getItem('yugen-beyondverse-save-v1') || 'null');
@@ -258,19 +223,13 @@ const syncMusicToSave = () => {
     ambientAudio.setTheme('village');
   }
 };
-
 ambientAudio.setTheme('village');
 syncMusicToSave();
 setInterval(syncMusicToSave, 1000);
-
 window.addEventListener('keydown', (event) => {
-  if (event.key === 'e' || event.key === 'E' || event.key === ' ') {
-    ambientAudio.chime('interact');
-  }
+  if (event.key === 'e' || event.key === 'E' || event.key === ' ') ambientAudio.chime('interact');
 });
-window.addEventListener('yugen-audio', (event) => {
-  ambientAudio.chime(event.detail?.kind || 'dialogue');
-});
+window.addEventListener('yugen-audio', (event) => ambientAudio.chime(event.detail?.kind || 'dialogue'));
 window.addEventListener('yugen-start-chapter2', () => {
   ambientAudio.chime('transition');
   if (!game) return;
