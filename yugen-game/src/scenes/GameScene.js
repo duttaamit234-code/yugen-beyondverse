@@ -411,14 +411,13 @@ export default class GameScene extends Phaser.Scene {
 
     this.scale.on('resize', () => {
       this.layoutUI();
-      this.layoutTouchControls(makeButton);
+      this.layoutTouchControls();
     });
 
-    this.touchButtonsFactory = makeButton;
-    this.layoutTouchControls(makeButton);
+    this.layoutTouchControls();
   }
 
-  layoutTouchControls(makeButton) {
+  layoutTouchControls() {
     if (this.touchControlObjects) {
       this.touchControlObjects.forEach(obj => obj.destroy());
     }
@@ -438,17 +437,14 @@ export default class GameScene extends Phaser.Scene {
       [w - 88, h - 36, '▼', 'down']
     ];
 
-    const originalAdd = this.add;
-    const created = [];
-
     positions.forEach(([x, y, label, key]) => {
-      const button = originalAdd.circle(x, y, 29, 0x101525, 0.72)
+      const button = this.add.circle(x, y, 29, 0x101525, 0.72)
         .setStrokeStyle(1, 0x9da6b8, 0.5)
         .setScrollFactor(0)
         .setDepth(120)
         .setInteractive();
 
-      originalAdd.text(x, y, label, {
+      const labelText = this.add.text(x, y, label, {
         fontFamily: 'sans-serif',
         fontSize: '17px',
         color: '#f1f3f6'
@@ -464,13 +460,12 @@ export default class GameScene extends Phaser.Scene {
         this.touchState[key] = true;
         button.setAlpha(1);
       });
+
       button.on('pointerup', release);
       button.on('pointerout', release);
 
-      created.push(button);
+      this.touchControlObjects.push(button, labelText);
     });
-
-    this.touchControlObjects = created;
   }
 
   layoutUI() {
