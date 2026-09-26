@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0B0E14">
+    android:background="@color/statsyuri_background">
 
     <com.yugen.statsyuri.StatsBackgroundView
         android:layout_width="match_parent"
@@ -39,7 +39,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="StatsYuri"
-                        android:textColor="#F5F1FF"
+                        android:textColor="@color/statsyuri_text"
                         android:textSize="31sp"
                         android:textStyle="bold" />
 
@@ -48,20 +48,25 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="3dp"
                         android:text="Statistical analysis, explained clearly"
-                        android:textColor="#8DD8FF"
+                        android:textColor="@color/statsyuri_cyan"
                         android:textSize="15sp" />
                 </LinearLayout>
+
+                <com.yugen.statsyuri.SettingsButtonView
+                    android:layout_width="52dp"
+                    android:layout_height="52dp"
+                    android:layout_marginEnd="8dp" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:background="#242B3D"
+                    android:background="@color/statsyuri_surface"
                     android:paddingStart="11dp"
                     android:paddingTop="7dp"
                     android:paddingEnd="11dp"
                     android:paddingBottom="7dp"
                     android:text="OFFLINE"
-                    android:textColor="#C9A9FF"
+                    android:textColor="@color/statsyuri_accent"
                     android:textSize="10sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -71,7 +76,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="11dp"
                 android:text="Your data stays on this device. Choose a dataset and StatsYuri will select and explain a suitable analysis."
-                android:textColor="#AEB7C8"
+                android:textColor="@color/statsyuri_muted"
                 android:textSize="14sp"
                 android:lineSpacingExtra="3dp" />
 
@@ -79,7 +84,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
-                app:cardBackgroundColor="#1A1F2C"
+                app:cardBackgroundColor="@color/statsyuri_card"
                 app:cardCornerRadius="22dp"
                 app:strokeColor="#FFFFFF0D"
                 app:strokeWidth="1dp">
@@ -94,7 +99,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Ask StatsYuri"
-                        android:textColor="#F5F1FF"
+                        android:textColor="@color/statsyuri_text"
                         android:textSize="20sp"
                         android:textStyle="bold" />
 
@@ -103,7 +108,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="The question is optional. Leave it empty to analyze the dataset automatically."
-                        android:textColor="#8792A5"
+                        android:textColor="@color/statsyuri_muted"
                         android:textSize="13sp"
                         android:lineSpacingExtra="2dp" />
 
@@ -112,13 +117,13 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="13dp"
                         android:hint="What do you want to find out?"
-                        app:boxBackgroundColor="#242B3D"
+                        app:boxBackgroundColor="@color/statsyuri_surface"
                         app:boxBackgroundMode="filled"
                         app:boxCornerRadiusBottomEnd="16dp"
                         app:boxCornerRadiusBottomStart="16dp"
                         app:boxCornerRadiusTopEnd="16dp"
                         app:boxCornerRadiusTopStart="16dp"
-                        app:hintTextColor="#8994A8">
+                        app:hintTextColor="@color/statsyuri_muted">
 
                         <com.google.android.material.textfield.TextInputEditText
                             android:id="@+id/questionInput"
@@ -127,7 +132,7 @@
                             android:gravity="top|start"
                             android:inputType="textCapSentences|textMultiLine"
                             android:padding="14dp"
-                            android:textColor="#F2F4F8"
+                            android:textColor="@color/statsyuri_text"
                             android:textSize="15sp" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -138,12 +143,12 @@
                         android:layout_marginTop="12dp"
                         android:text="Choose CSV / Excel dataset"
                         android:textAllCaps="false"
-                        android:textColor="#EDE8FF"
+                        android:textColor="@color/statsyuri_text"
                         android:textSize="14sp"
-                        app:backgroundTint="#242B3D"
+                        app:backgroundTint="@color/statsyuri_surface"
                         app:cornerRadius="16dp"
                         app:icon="@android:drawable/ic_menu_upload"
-                        app:iconTint="#8DD8FF" />
+                        app:iconTint="@color/statsyuri_cyan" />
 
                     <TextView
                         android:id="@+id/fileName"
@@ -151,7 +156,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
                         android:text="No dataset selected"
-                        android:textColor="#7F8A9E"
+                        android:textColor="@color/statsyuri_muted"
                         android:textSize="12sp" />
 
                     <com.google.android.material.button.MaterialButtonToggleGroup
@@ -171,7 +176,7 @@
                             android:text="Efficient"
                             android:textAllCaps="false"
                             android:textSize="13sp"
-                            app:backgroundTint="#242B3D" />
+                            app:backgroundTint="@color/statsyuri_surface" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/fullMode"
@@ -181,7 +186,7 @@
                             android:text="Full analysis"
                             android:textAllCaps="false"
                             android:textSize="13sp"
-                            app:backgroundTint="#242B3D" />
+                            app:backgroundTint="@color/statsyuri_surface" />
                     </com.google.android.material.button.MaterialButtonToggleGroup>
 
                     <TextView
@@ -190,7 +195,7 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="7dp"
                         android:text="Efficient selects one compatible analysis."
-                        android:textColor="#7F8A9E"
+                        android:textColor="@color/statsyuri_muted"
                         android:textSize="12sp" />
 
                     <com.google.android.material.button.MaterialButton
@@ -203,7 +208,7 @@
                         android:textColor="#281C43"
                         android:textSize="16sp"
                         android:textStyle="bold"
-                        app:backgroundTint="#C9A9FF"
+                        app:backgroundTint="@color/statsyuri_accent"
                         app:cornerRadius="18dp"
                         app:icon="@android:drawable/ic_menu_search"
                         app:iconTint="#281C43" />
@@ -215,7 +220,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:textColor="#8DD8FF"
+                android:textColor="@color/statsyuri_cyan"
                 android:textSize="14sp"
                 android:textStyle="bold"
                 android:lineSpacingExtra="3dp" />
@@ -233,7 +238,7 @@
                 android:layout_marginTop="28dp"
                 android:gravity="center"
                 android:text="© 2026 Amit Dutta • StatsYuri • Yugen Beyondverse"
-                android:textColor="#667083"
+                android:textColor="@color/statsyuri_footer"
                 android:textSize="11sp" />
         </LinearLayout>
     </ScrollView>
