@@ -1,0 +1,56 @@
+name: Build StatsYuri Android
+
+on:
+  push:
+    paths:
+      - 'statsyuri-android/**'
+      - 'yugen-analytica/**'
+      - '.github/workflows/build-statsyuri-android.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GRADLE_VERSION: '8.11.1'
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Build debug APK
+        working-directory: statsyuri-android
+        run: gradle --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Verify APK
+        run: |
+          test -f statsyuri-android/app/build/outputs/apk/debug/app-debug.apk
+          ls -lh statsyuri-android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload StatsYuri APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StatsYuri-debug-apk
+          path: statsyuri-android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
