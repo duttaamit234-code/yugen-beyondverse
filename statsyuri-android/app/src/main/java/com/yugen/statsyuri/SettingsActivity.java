@@ -119,7 +119,15 @@ public class SettingsActivity extends AppCompatActivity {
         privacy.addView(text("CSV and Excel analysis remains local. StatsYuri does not upload a dataset merely because you analyze it. Google sign-in is for account identity and future synchronized features; it does not automatically grant access to Google Drive or other private Google data.", 13, MUTED, false));
         root.addView(privacy, margin(0, 0, 0, 12));
 
-        root.addView(text("© 2026 Amit Dutta • StatsYuri • Yugen Beyondverse", 11, FOOTER, false));
+        LinearLayout legal = card();
+        legal.addView(text("Legal & ownership", 17, TEXT, true));
+        legal.addView(text("© 2026 Yugen Beyondverse. All rights reserved.", 13, FOOTER, true), margin(0, 6, 0, 0));
+        legal.addView(text("StatsYuri and its original software, interface design, branding, documentation, and content are protected intellectual property of Yugen Beyondverse, except where otherwise stated.", 12, MUTED, false), margin(0, 4, 0, 0));
+        root.addView(legal, margin(0, 0, 0, 12));
+
+        TextView footer = text("© 2026 Yugen Beyondverse. All rights reserved.", 11, FOOTER, false);
+        footer.setGravity(Gravity.CENTER);
+        root.addView(footer, margin(0, 4, 0, 0));
         setContentView(scroll);
     }
 
@@ -191,7 +199,7 @@ public class SettingsActivity extends AppCompatActivity {
                 + "3. Google account\nGoogle sign-in is optional. When enabled, it is used to identify your account and support account-based features. StatsYuri will not claim access to Google Drive or other private Google services unless a separate authorization request is shown and you approve it.\n\n"
                 + "4. Accuracy\nStatistical calculations are provided without a guarantee that they are suitable for every dataset or research question. Always inspect the data, assumptions, sample design, and reported results before using them in a consequential decision.\n\n"
                 + "5. Availability\nFeatures may change, be added, removed, or temporarily become unavailable.\n\n"
-                + "6. Intellectual property\nStatsYuri, its software, interface, branding, and original content are associated with Amit Dutta / Yugen Beyondverse unless otherwise stated.\n\n"
+                + "6. Intellectual property\nStatsYuri and its original software, interface design, branding, documentation, and content are the intellectual property of Yugen Beyondverse, except where otherwise stated. All rights are reserved.\n\n"
                 + "7. Acceptance\nBy enabling the acceptance checkbox and signing in, you confirm that you have read and accepted these Terms & Conditions. You may use the offline analysis features without a Google account.\n\n"
                 + "Contact: use the project repository or the published contact information for Yugen Beyondverse."
                 + "\n\nThese terms should be reviewed by a qualified legal professional before public commercial release.";
