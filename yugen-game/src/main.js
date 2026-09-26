@@ -46,9 +46,43 @@ const config = {
 };
 
 const game = new Phaser.Game(config);
+
+const themeForStage = (stage = '') => {
+  if (stage.startsWith('chapter4')) return 'ruins';
+  if (stage.startsWith('chapter3')) return 'shrine';
+  if (stage === 'chapter2Shrine') return 'shrine';
+  if (stage.startsWith('chapter2')) return 'forest';
+  return 'village';
+};
+
+const syncMusicToSave = () => {
+  try {
+    const saved = JSON.parse(localStorage.getItem('yugen-beyondverse-save-v1') || 'null');
+    ambientAudio.setTheme(themeForStage(saved?.stage || ''));
+  } catch {
+    ambientAudio.setTheme('village');
+  }
+};
+
 ambientAudio.setTheme('village');
 
+// Story progression is saved in localStorage. Polling here keeps the soundtrack
+// synchronized even when a scene changes the stage internally.
+syncMusicToSave();
+setInterval(syncMusicToSave, 700);
+
+// Small UI/gameplay sounds. Music itself remains continuous and low-volume.
+window.addEventListener('keydown', (event) => {
+  if (event.key === 'e' || event.key === 'E' || event.key === ' ') {
+    ambientAudio.chime('interact');
+  }
+});
+window.addEventListener('yugen-audio', (event) => {
+  ambientAudio.chime(event.detail?.kind || 'dialogue');
+});
+
 const startLaterChapters = () => {
+  ambientAudio.chime('transition');
   if (game.scene.isActive('GameScene')) game.scene.stop('GameScene');
   if (!game.scene.isActive('LaterChaptersScene')) {
     game.scene.start('LaterChaptersScene');
