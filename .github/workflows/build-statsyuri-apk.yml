@@ -73,7 +73,7 @@ jobs:
           AAPT2="${ANDROID_HOME}/build-tools/35.0.0/aapt2"
           "$AAPT2" dump badging "$APK" > /tmp/badging.txt
           grep -F "launchable-activity: name='com.yugenbeyondverse.statsyuri.MainActivity'" /tmp/badging.txt
-          grep -F "package: name='com.yugenbeyondverse.statsyuri' versionName='0.7.3-stable'" /tmp/badging.txt
+          grep -F "package: name='com.yugenbeyondverse.statsyuri'" /tmp/badging.txt | grep -F "versionName='0.7.3-stable'"
           unzip -p "$APK" classes.dex | strings | grep -Fq 'Lcom/yugenbeyondverse/statsyuri/MainActivity;'
           unzip -p "$APK" classes.dex | strings | grep -Fq 'Lcom/yugen/statsyuri/StatsYuriActivity;'
 
