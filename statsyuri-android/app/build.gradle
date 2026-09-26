@@ -36,9 +36,8 @@ chaquopy {
             install "scipy"
             install "statsmodels"
             install "openpyxl"
+            install "xlrd"
         }
-
-        buildPython "python3.11"
     }
 
     sourceSets {
