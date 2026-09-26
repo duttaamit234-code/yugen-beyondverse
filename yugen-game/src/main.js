@@ -12,6 +12,7 @@ const showBootError = (message) => {
   boot.style.display = 'grid';
   bootError.style.display = 'block';
   bootError.textContent = `Yugen could not start.\n\n${String(message || 'Unknown runtime error')}`;
+  console.error('[YUGEN BOOT]', message);
 };
 
 window.addEventListener('error', (event) => {
@@ -25,20 +26,20 @@ window.addEventListener('yugen-ready', () => {
 });
 
 const config = {
-  // The game is entirely vector/Canvas based right now. Canvas avoids mobile
-  // WebGL texture initialization failures while we are still in prototype stage.
+  // Phaser 3.90 is the production-stable v3 release. We use Canvas for this
+  // prototype because the game currently consists of vector shapes and text,
+  // avoiding unnecessary mobile WebGL texture pressure.
   type: Phaser.CANVAS,
   parent: 'game',
   width: 1280,
   height: 720,
   backgroundColor: '#0b1020',
-  pixelArt: false,
   antialias: true,
   render: { roundPixels: true },
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    min: { width: 360, height: 640 }
+    expandParent: true
   },
   physics: {
     default: 'arcade',
@@ -47,7 +48,12 @@ const config = {
   scene: [GameScene, LaterChaptersScene]
 };
 
-const game = new Phaser.Game(config);
+let game;
+try {
+  game = new Phaser.Game(config);
+} catch (error) {
+  showBootError(error?.stack || error);
+}
 
 const themeForStage = (stage = '') => {
   if (stage.startsWith('chapter4')) return 'ruins';
@@ -81,6 +87,7 @@ window.addEventListener('yugen-audio', (event) => {
 
 window.addEventListener('yugen-start-chapter2', () => {
   ambientAudio.chime('transition');
+  if (!game) return;
   if (game.scene.isActive('GameScene')) game.scene.stop('GameScene');
   if (!game.scene.isActive('LaterChaptersScene')) game.scene.start('LaterChaptersScene');
 });
