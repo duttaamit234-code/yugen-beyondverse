@@ -9,7 +9,7 @@
         android:supportsRtl="true">
 
         <activity
-            android:name=".StatsYuriActivity"
+            android:name=".StatsYuriProActivity"
             android:screenOrientation="portrait"
             android:exported="true">
             <intent-filter>
