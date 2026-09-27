@@ -1,16 +1,18 @@
 {
   "name": "yugen-beyondverse-game",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build --base=/yugen-beyondverse/ --sourcemap",
     "preview": "vite preview",
-    "phase1:check": "node scripts/phase1-check.mjs"
+    "phase1:check": "node scripts/phase1-check.mjs",
+    "phase2:check": "node scripts/phase2-check.mjs"
   },
   "dependencies": {
-    "phaser": "3.90.0"
+    "phaser": "3.90.0",
+    "three": "0.180.0"
   },
   "devDependencies": {
     "vite": "7.1.7"
