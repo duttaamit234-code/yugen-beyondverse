@@ -34,6 +34,9 @@ jobs:
       - name: Phase 1 structure check
         run: npm run phase1:check
 
+      - name: Phase 2 structure check
+        run: npm run phase2:check
+
       - name: Build
         run: npm run build
 
