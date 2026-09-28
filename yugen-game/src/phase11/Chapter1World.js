@@ -13,6 +13,7 @@ import { itemData } from '../phase8/ItemData.js';
 import { UIManager } from '../phase7/UIManager.js';
 import { QuestTrackerUI } from '../phase7/QuestTrackerUI.js';
 import { InventoryUI } from '../phase8/InventoryUI.js';
+import { MobileControls } from './MobileControls.js';
 import { Chapter1Flow } from './Chapter1Flow.js';
 import { chapter1Data } from './Chapter1Data.js';
 
@@ -39,7 +40,6 @@ export class Chapter1World {
     this.questUI = new QuestTrackerUI(this.ui, this.quests);
     this.inventoryUI = new InventoryUI(this.ui, this.inventory);
     this.chapter = new Chapter1Flow({ quests: this.quests, dialogue: this.dialogue, inventory: this.inventory, chapterData: chapter1Data });
-    this.interactions = new InteractionSystem(this.player, 2.2);
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
 
@@ -47,6 +47,7 @@ export class Chapter1World {
     this.buildMap();
     this.buildPlayer();
     this.buildNPCs();
+    this.buildMobileControls();
     this.bindControls();
     this.chapter.start();
     this.resize();
@@ -132,12 +133,36 @@ export class Chapter1World {
     });
   }
 
+  buildMobileControls() {
+    this.mobileControls = new MobileControls(this.container, {
+      onInteract: () => this.handleInteract(),
+      onDialogueNext: () => this.dialogue.advance(),
+      onInventory: () => this.inventoryUI.toggle(),
+      onMenu: () => this.toggleMobileMenu(),
+      onAction: () => this.handleAction()
+    });
+    this.mobileControls.attachInput(this.input);
+    this.dialogueUnsubscribe = this.dialogue.onChange((state) => this.mobileControls.setDialogueMode(state.active));
+  }
+
+  handleInteract() {
+    if (this.dialogue.getState().active) this.dialogue.advance();
+    else this.interactions.interact();
+  }
+
+  handleAction() {
+    // Phase 9 combat will connect to this action button.
+    this.mobileControls.action.textContent = 'Action';
+  }
+
+  toggleMobileMenu() {
+    // Menu architecture is reserved for the Phase 7 menu implementation.
+    this.mobileControls.menu.textContent = this.mobileControls.menu.textContent === 'Menu' ? 'Close' : 'Menu';
+  }
+
   bindControls() {
     this.handleKey = (event) => {
-      if (event.key.toLowerCase() === 'e') {
-        if (this.dialogue.getState().active) this.dialogue.advance();
-        else this.interactions.interact();
-      }
+      if (event.key.toLowerCase() === 'e') this.handleInteract();
       if (event.key.toLowerCase() === 'i') this.inventoryUI.toggle();
     };
     window.addEventListener('keydown', this.handleKey);
@@ -171,6 +196,8 @@ export class Chapter1World {
     this.resizeObserver.disconnect();
     this.input.destroy();
     window.removeEventListener('keydown', this.handleKey);
+    this.dialogueUnsubscribe?.();
+    this.mobileControls.destroy();
     this.dialogueUI.destroy();
     this.questUI.destroy();
     this.inventoryUI.destroy();
